@@ -1,0 +1,8 @@
+{
+  "name": "rustbin",
+  "version-string": "1.92.0",
+  "description": "Rust toolchain (rustup, rustc, cargo) installer for vcpkg with cross-platform support",
+  "homepage": "https://www.rust-lang.org/",
+  "license": "MIT",
+  "dependencies": ["vcpkg-cmake", "vcpkg-cmake-config"]
+}

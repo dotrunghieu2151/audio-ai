@@ -1,0 +1,9 @@
+{
+  "versions": [
+    {
+      "path": "$/ports/rustbin",
+      "version": "1.92.0",
+      "port-version": 0
+    }
+  ]
+}

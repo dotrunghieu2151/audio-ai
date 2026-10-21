@@ -1,0 +1,285 @@
+{
+  "version": 10,
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Default",
+      "description": "Build the project with Ninja Multi-Config",
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "${sourceDir}/.build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/.vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_STANDARD": "20"
+      },
+      "environment": {
+        "SLINT_LIVE_PREVIEW": "1"
+      }
+    },
+    {
+      "name": "windows",
+      "inherits": "default",
+      "displayName": "Windows",
+      "description": "This build is only available on Windows",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/windows-msvc.cmake"
+      }
+    },
+    {
+      "name": "windows-clang",
+      "inherits": "default",
+      "displayName": "Windows Clang",
+      "description": "This build is only available on Windows with clang-cl",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/windows-clang.cmake"
+      }
+    },
+    {
+      "name": "linux",
+      "inherits": "default",
+      "displayName": "Linux",
+      "description": "This build is only available on Linux",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/linux-gcc.cmake"
+      }
+    },
+    {
+      "name": "macos",
+      "inherits": "default",
+      "displayName": "MacOS",
+      "description": "This build is only available on MacOS",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/macos-clang.cmake"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default-debug",
+      "configurePreset": "default",
+      "displayName": "Debug",
+      "description": "Build the project with Ninja in Debug mode",
+      "configuration": "Debug"
+    },
+    {
+      "name": "default-release",
+      "configurePreset": "default",
+      "displayName": "Release",
+      "description": "Build the project with Ninja in Default mode",
+      "configuration": "Release"
+    },
+    {
+      "name": "default-fast",
+      "configurePreset": "default",
+      "displayName": "Fast",
+      "description": "Build the project with Ninja in Fast mode",
+      "configuration": "Fast"
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows",
+      "displayName": "Debug",
+      "description": "Build the project with Ninja in Debug mode on Windows",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows",
+      "displayName": "Release",
+      "description": "Build the project with Ninja in Release mode on Windows",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-fast",
+      "configurePreset": "windows",
+      "displayName": "Fast",
+      "description": "Build the project with Ninja in Fast mode on Windows",
+      "configuration": "Fast"
+    },
+    {
+      "name": "windows-clang-debug",
+      "configurePreset": "windows-clang",
+      "displayName": "Debug",
+      "description": "Build the project with Ninja in Debug mode on Windows with clang-cl",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-clang-release",
+      "configurePreset": "windows-clang",
+      "displayName": "Release",
+      "description": "Build the project with Ninja in Release mode on Windows with clang-cl",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-clang-fast",
+      "configurePreset": "windows-clang",
+      "displayName": "Fast",
+      "description": "Build the project with Ninja in Fast mode on Windows with clang-cl",
+      "configuration": "Fast"
+    },
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux",
+      "displayName": "Debug",
+      "description": "Build the project with Ninja in Debug mode on Linux",
+      "configuration": "Debug"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux",
+      "displayName": "Release",
+      "description": "Build the project with Ninja in Release mode on Linux",
+      "configuration": "Release"
+    },
+    {
+      "name": "linux-fast",
+      "configurePreset": "linux",
+      "displayName": "Fast",
+      "description": "Build the project with Ninja in Fast mode on Linux",
+      "configuration": "Fast"
+    },
+    {
+      "name": "macos-debug",
+      "configurePreset": "macos",
+      "displayName": "Debug",
+      "description": "Build the project with Ninja in Debug mode on MacOS",
+      "configuration": "Debug"
+    },
+    {
+      "name": "macos-release",
+      "configurePreset": "macos",
+      "displayName": "Release",
+      "description": "Build the project with Ninja in Release mode on MacOS",
+      "configuration": "Release"
+    },
+    {
+      "name": "macos-fast",
+      "configurePreset": "macos",
+      "displayName": "Fast",
+      "description": "Build the project with Ninja in Fast mode on MacOS",
+      "configuration": "Fast"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "default-test",
+      "configurePreset": "default",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    },
+    {
+      "name": "windows-test",
+      "configurePreset": "windows",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    },
+    {
+      "name": "windows-clang-test",
+      "configurePreset": "windows-clang",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    },
+    {
+      "name": "linux-test",
+      "configurePreset": "linux",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    },
+    {
+      "name": "macos-test",
+      "configurePreset": "macos",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "zip",
+      "configurePreset": "default",
+      "generators": ["TGZ"]
+    },
+    {
+      "name": "windows-wix",
+      "configurePreset": "windows",
+      "generators": ["WIX"]
+    },
+    {
+      "name": "linux-deb",
+      "configurePreset": "linux",
+      "generators": ["DEB"]
+    },
+    {
+      "name": "macos-dmg",
+      "configurePreset": "macos",
+      "generators": ["DMG"]
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "default",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "default-debug"
+        },
+        {
+          "type": "test",
+          "name": "default-test"
+        },
+        {
+          "type": "package",
+          "name": "zip"
+        }
+      ]
+    }
+  ]
+}

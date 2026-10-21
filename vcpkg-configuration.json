@@ -1,0 +1,14 @@
+{
+  "default-registry": {
+    "kind": "builtin",
+    "baseline": "74ce77f761300087868628462a93928869761c86"
+  },
+  "registries": [
+    {
+      "kind": "filesystem",
+      "path": "vcpkg-registry",
+      "baseline": "1.0.0",
+      "packages": []
+    }
+  ]
+}

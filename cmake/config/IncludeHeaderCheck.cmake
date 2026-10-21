@@ -1,0 +1,8 @@
+find_program(IWYU_EXE NAMES include-what-you-use)
+if (IWYU_EXE)
+    message(STATUS "Found include-what-you-use: ${IWYU_EXE}")
+    set(CMAKE_C_INCLUDE_WHAT_YOU_USE ${IWYU_EXE})
+    set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_EXE})
+else()
+    message(ERROR "include-what-you-use not found! Skipping include header check.")
+endif()

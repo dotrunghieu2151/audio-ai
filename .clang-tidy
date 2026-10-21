@@ -1,0 +1,18 @@
+Checks: >
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  bugprone-*,
+  misc-*,
+  portability-*,
+  -modernize-use-trailing-return-type
+WarningsAsErrors: 'clang-analyzer*,bugprone*,performance*'
+HeaderFilterRegex: 'src/|include/'
+FormatStyle: file
+CheckOptions:
+  - key:             modernize-use-nullptr.NullMacros
+    value:           'NULL'
+  - key:             modernize-loop-convert.MinConfidence
+    value:           reasonable
