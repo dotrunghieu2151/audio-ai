@@ -8,110 +8,139 @@
       "generator": "Ninja Multi-Config",
       "binaryDir": "${sourceDir}/.build/${presetName}",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/.vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_CXX_STANDARD": "20"
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/default.cmake",
+        "CMAKE_EXPORT_COMPLE_COMMANDS": "ON",
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE": "ON",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION_FAST": "ON"
       },
       "environment": {
-        "SLINT_LIVE_PREVIEW": "1"
+        "SLINT_LIVE_PREVIEW": "1",
+        "VCPKG_ROOT": "$env{HOME}/.vcpkg"
       }
     },
     {
-      "name": "windows",
+      "name": "windows-msvc",
       "inherits": "default",
-      "displayName": "Windows",
-      "description": "This build is only available on Windows",
+      "displayName": "Windows (MSVC)",
+      "description": "This build is only available on Windows with MSVC compiler",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       },
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/windows-msvc.cmake"
+        "CMAKE_SYSTEM_NAME": "Windows",
+        "CMAKE_CXX_FLAGS_INIT": "/W4 /permissive- /EHsc /Zc:__cplusplus /utf-8",
+        "CMAKE_GENERATOR_PLATFORM": "x64",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
+        "CMAKE_CXX_FLAGS_DEBUG_INIT": "/Od /Zi /MTd /DDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE_INIjT": "/O2 /DNDEBUG /GL /Gw",
+        "CMAKE_CXX_FLAGS_FAST_INIT": "/Ox /Ot /Oi /GL /Gw /fp:fast /DNDEBUG"
       }
     },
     {
       "name": "windows-clang",
       "inherits": "default",
-      "displayName": "Windows Clang",
-      "description": "This build is only available on Windows with clang-cl",
+      "displayName": "Windows (Clang)",
+      "description": "This build is only available on Windows with clang-cl (MSVC compatible mode)",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       },
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/windows-clang.cmake"
+        "CMAKE_SYSTEM_NAME": "Windows",
+        "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-unused-parameter",
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_LINKER": "lld-link",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
+        "CMAKE_CXX_FLAGS_DEBUG_INIT": "-O0 -g3 -DDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-O3 -DNDEBUG -march=native",
+        "CMAKE_CXX_FLAGS_FAST_INIT": "-Ofast -DNDEBUG -march=native -funroll-loops -ffast-math"
       }
     },
     {
-      "name": "linux",
+      "name": "linux-clang",
       "inherits": "default",
-      "displayName": "Linux",
-      "description": "This build is only available on Linux",
+      "displayName": "Linux (Clang)",
+      "description": "This build is only available on Linux (Clang)",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Linux"
       },
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/linux-gcc.cmake"
+        "CMAKE_C_COMPILER": "clang++",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-unused-parameter -fPIC",
+        "CMAKE_SYSTEM_NAME": "Linux",
+        "CMAKE_CXX_FLAGS_DEBUG_INIT": "-O0 -g3 -DDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-O3 -DNDEBUG -march=native -mtune=native",
+        "CMAKE_CXX_FLAGS_FAST_INIT": "-Ofast -DNDEBUG -march=native -mtune=native -funroll-loops -ffast-math"
+      }
+    },
+    {
+      "name": "linux-gcc",
+      "inherits": "default",
+      "displayName": "Linux (GCC)",
+      "description": "This build is only available on Linux (GCC)",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-unused-parameter -fPIC",
+        "CMAKE_SYSTEM_NAME": "Linux",
+        "CMAKE_CXX_FLAGS_DEBUG_INIT": "-O0 -g3 -DDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-O3 -DNDEBUG -march=native -mtune=native",
+        "CMAKE_CXX_FLAGS_FAST_INIT": "-Ofast -DNDEBUG -march=native -mtune=native -funroll-loops -ffast-math"
       }
     },
     {
       "name": "macos",
       "inherits": "default",
       "displayName": "MacOS",
-      "description": "This build is only available on MacOS",
+      "description": "This build is only available on MacOS (Clang)",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Darwin"
       },
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/macos-clang.cmake"
+        "CMAKE_SYSTEM_NAME": "Darwin",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "15.0",
+        "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -fvisibility=hidden -fPIC",
+        "CMAKE_CXX_FLAGS_DEBUG_INIT": "-O0 -g3 -DDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE_INIT": "-O3 -DNDEBUG -march=native -mtune=native",
+        "CMAKE_CXX_FLAGS_FAST_INIT": "-Ofast -DNDEBUG -march=native -mtune=native -funroll-loops -ffast-math"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "default-debug",
-      "configurePreset": "default",
-      "displayName": "Debug",
-      "description": "Build the project with Ninja in Debug mode",
-      "configuration": "Debug"
-    },
-    {
-      "name": "default-release",
-      "configurePreset": "default",
-      "displayName": "Release",
-      "description": "Build the project with Ninja in Default mode",
-      "configuration": "Release"
-    },
-    {
-      "name": "default-fast",
-      "configurePreset": "default",
-      "displayName": "Fast",
-      "description": "Build the project with Ninja in Fast mode",
-      "configuration": "Fast"
-    },
-    {
-      "name": "windows-debug",
-      "configurePreset": "windows",
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc",
       "displayName": "Debug",
       "description": "Build the project with Ninja in Debug mode on Windows",
       "configuration": "Debug"
     },
     {
-      "name": "windows-release",
-      "configurePreset": "windows",
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc",
       "displayName": "Release",
       "description": "Build the project with Ninja in Release mode on Windows",
       "configuration": "Release"
     },
     {
-      "name": "windows-fast",
-      "configurePreset": "windows",
+      "name": "windows-msvc-fast",
+      "configurePreset": "windows-msvc",
       "displayName": "Fast",
       "description": "Build the project with Ninja in Fast mode on Windows",
       "configuration": "Fast"
@@ -138,22 +167,22 @@
       "configuration": "Fast"
     },
     {
-      "name": "linux-debug",
-      "configurePreset": "linux",
+      "name": "linux-clang-debug",
+      "configurePreset": "linux-clang",
       "displayName": "Debug",
       "description": "Build the project with Ninja in Debug mode on Linux",
       "configuration": "Debug"
     },
     {
-      "name": "linux-release",
-      "configurePreset": "linux",
+      "name": "linux-clang-release",
+      "configurePreset": "linux-clang",
       "displayName": "Release",
       "description": "Build the project with Ninja in Release mode on Linux",
       "configuration": "Release"
     },
     {
-      "name": "linux-fast",
-      "configurePreset": "linux",
+      "name": "linux-clang-fast",
+      "configurePreset": "linux-clang",
       "displayName": "Fast",
       "description": "Build the project with Ninja in Fast mode on Linux",
       "configuration": "Fast"
@@ -193,8 +222,8 @@
       }
     },
     {
-      "name": "windows-test",
-      "configurePreset": "windows",
+      "name": "windows-msvc-test",
+      "configurePreset": "windows-msvc",
       "output": {
         "outputOnFailure": true
       },
@@ -215,8 +244,8 @@
       }
     },
     {
-      "name": "linux-test",
-      "configurePreset": "linux",
+      "name": "linux-clang-test",
+      "configurePreset": "linux-clang",
       "output": {
         "outputOnFailure": true
       },
@@ -245,12 +274,12 @@
     },
     {
       "name": "windows-wix",
-      "configurePreset": "windows",
+      "configurePreset": "windows-msvc",
       "generators": ["WIX"]
     },
     {
       "name": "linux-deb",
-      "configurePreset": "linux",
+      "configurePreset": "linux-clang",
       "generators": ["DEB"]
     },
     {
@@ -265,19 +294,19 @@
       "steps": [
         {
           "type": "configure",
-          "name": "default"
+          "name": "linux-clang"
         },
         {
           "type": "build",
-          "name": "default-debug"
+          "name": "linux-clang-debug"
         },
         {
           "type": "test",
-          "name": "default-test"
+          "name": "linux-clang-test"
         },
         {
           "type": "package",
-          "name": "zip"
+          "name": "linux-deb"
         }
       ]
     }

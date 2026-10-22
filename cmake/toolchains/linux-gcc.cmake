@@ -2,11 +2,11 @@ set(CMAKE_SYSTEM_NAME Linux)
 
 # Compiler setup
 if (DEFINED ENV{CC})
-    set(CMAKE_C_COMPILER "$ENV{CC}")
-    set(CMAKE_CXX_COMPILER "$ENV{CXX}")
+  set(CMAKE_C_COMPILER "$ENV{CC}")
+  set(CMAKE_CXX_COMPILER "$ENV{CXX}")
 else()
-    find_program(CMAKE_C_COMPILER gcc)
-    find_program(CMAKE_CXX_COMPILER g++)
+  find_program(CMAKE_C_COMPILER gcc)
+  find_program(CMAKE_CXX_COMPILER g++)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -26,22 +26,24 @@ set(CMAKE_CXX_FLAGS_FAST_INIT "-Ofast -DNDEBUG -march=native -mtune=native -funr
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_FAST ON)
 
-# ---------------------------------
 # vcpkg integration
-# ---------------------------------
-if (NOT VCPKG_ROOT)
-    # if VCPKG_ROOT is not set, use the local vcpkg.cmake
-    include(${CMAKE_CURRENT_LIST_DIR}/vcpkg.cmake)
-    message(STATUS "Using local vcpkg.cmake")
+if (NOT DEFINED ENV{VCPKG_ROOT})
+  # if VCPKG_ROOT is not set, use the local vcpkg.cmake
+  message(
+  FATAL_ERROR
+  "VCPKG executable not found via VCPKG_ROOT env: $ENV{VCPKG_ROOT}.
+  Please install vcpkg or use the install-vcpkg.sh script provided by the project"
+)
 else()
-    # if VCPKG_ROOT is set, use the prebuilt vcpkg
-    include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
-    message(STATUS "Using prebuilt vcpkg.cmake")
+  # if VCPKG_ROOT is set, use the prebuilt vcpkg
+  include("$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+  message(STATUS "Using prebuilt vcpkg.cmake")
 endif()
 
+
 if (ENABLE_LINTING)
-    include(${CMAKE_SOURCE_DIR}/cmake/config/IncludeHeaderCheck.cmake)
-    # clang-tidy has partial support for GCC, so we can still use it here.
-    include(${CMAKE_SOURCE_DIR}/cmake/config/ClangTidyLint.cmake)
-    include(${CMAKE_SOURCE_DIR}/cmake/config/CppCheckLint.cmake)
+  include(${CMAKE_SOURCE_DIR}/cmake/config/IncludeHeaderCheck.cmake)
+  # clang-tidy has partial support for GCC, so we can still use it here.
+  include(${CMAKE_SOURCE_DIR}/cmake/config/ClangTidyLint.cmake)
+  include(${CMAKE_SOURCE_DIR}/cmake/config/CppCheckLint.cmake)
 endif()

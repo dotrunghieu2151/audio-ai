@@ -26,15 +26,14 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_FAST ON)
 
 # vcpkg integration
 if (NOT VCPKG_ROOT)
-    # if VCPKG_ROOT is not set, use the local vcpkg.cmake
-    include(${CMAKE_CURRENT_LIST_DIR}/vcpkg.cmake)
-    message(STATUS "Using local vcpkg.cmake")
+  # if VCPKG_ROOT is not set, use the local vcpkg.cmake
+  message(FATAL_ERROR "VCPKG executable not found via VCPKG_ROOT env: ${VCPKG_ROOT}. Please install vcpkg or use the install-vcpkg.sh script provided by the project")
 else()
-    # if VCPKG_ROOT is set, use the prebuilt vcpkg
-    include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
-    message(STATUS "Using prebuilt vcpkg.cmake")
+  # if VCPKG_ROOT is set, use the prebuilt vcpkg
+  include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+  message(STATUS "Using prebuilt vcpkg.cmake")
 endif()
 
 if (ENABLE_LINTING)
-    include(${CMAKE_SOURCE_DIR}/cmake/config/IncludeHeaderCheck.cmake)
+  include(${CMAKE_SOURCE_DIR}/cmake/config/IncludeHeaderCheck.cmake)
 endif()
