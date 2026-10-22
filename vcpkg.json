@@ -1,8 +1,9 @@
 {
-  "name": "cpp-project-template",
+  "name": "audio-ai",
   "version": "10.1.1",
   "dependencies": [
     { "name": "fmt", "version>=": "12.2.0#1" },
-    { "name": "spdlog", "version>=": "1.17.0#1" }
+    { "name": "spdlog", "version>=": "1.17.0#1" },
+    { "name": "portaudio", "version>=": "19.7#9" }
   ]
 }
