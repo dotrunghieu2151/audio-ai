@@ -15,6 +15,7 @@
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION_FAST": "ON"
       },
       "environment": {
+        "PATH": "$penv{PATH}",
         "SLINT_LIVE_PREVIEW": "1",
         "VCPKG_ROOT": "$env{HOME}/.vcpkg"
       }
@@ -72,7 +73,7 @@
         "rhs": "Linux"
       },
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang++",
+        "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-unused-parameter -fPIC",
         "CMAKE_SYSTEM_NAME": "Linux",
@@ -290,7 +291,7 @@
   ],
   "workflowPresets": [
     {
-      "name": "default",
+      "name": "linux-clang-debug",
       "steps": [
         {
           "type": "configure",
@@ -299,14 +300,6 @@
         {
           "type": "build",
           "name": "linux-clang-debug"
-        },
-        {
-          "type": "test",
-          "name": "linux-clang-test"
-        },
-        {
-          "type": "package",
-          "name": "linux-deb"
         }
       ]
     }

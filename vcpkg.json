@@ -4,6 +4,7 @@
   "dependencies": [
     { "name": "fmt", "version>=": "12.2.0#1" },
     { "name": "spdlog", "version>=": "1.17.0#1" },
-    { "name": "portaudio", "version>=": "19.7#9" }
+    { "name": "portaudio", "version>=": "19.7#9" },
+    { "name": "slint", "version>=": "1.18.1#0", "features": ["live-preview"] }
   ]
 }

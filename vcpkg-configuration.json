@@ -8,7 +8,7 @@
       "kind": "filesystem",
       "path": "vcpkg-registry",
       "baseline": "1.0.0",
-      "packages": []
+      "packages": ["slint", "corrosion"]
     }
   ]
 }

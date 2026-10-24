@@ -1,15 +1,12 @@
 {
   "name": "slint",
-  "version-string": "1.15.1",
+  "version-string": "1.18.1",
   "description": "Slint GUI toolkit for C++",
   "homepage": "https://slint.dev",
-  "dependencies": [
-    "vcpkg-cmake",
-    "vcpkg-cmake-config",
-    {
-      "name": "corrosion",
-      "version>=": "0.6.0"
-    },
-    { "name": "rustbin", "version>=": "1.92.0", "host": true }
-  ]
+  "dependencies": ["vcpkg-cmake", "vcpkg-cmake-config", "corrosion"],
+  "features": {
+    "live-preview": {
+      "description": "Enable Slint live preview mode"
+    }
+  }
 }
