@@ -104,7 +104,7 @@ BASELINE="$(jq -er '.["default-registry"].baseline' "$CONFIG")" ||
 [[ "$BASELINE" =~ ^[[:xdigit:]]{40}$ ]] ||
     die "Baseline must be a full 40-character commit SHA"
 
-BASELINE="${BASELINE,,}"
+BASELINE=$(echo "$BASELINE" | tr '[:upper:]' '[:lower:]')
 
 case "$KIND" in
     builtin)
@@ -162,7 +162,7 @@ TARGET_COMMIT="$(
     git -C "$ROOT" rev-parse --verify "${REQUESTED_REF}^{commit}" 2>/dev/null
 )" || die "Cannot resolve '$VERSION' to a commit"
 
-TARGET_COMMIT="${TARGET_COMMIT,,}"
+TARGET_COMMIT=$(echo "$TARGET_COMMIT" | tr '[:upper:]' '[:lower:]')
 
 log "Resolved commit: $TARGET_COMMIT"
 
@@ -194,7 +194,7 @@ CURRENT_COMMIT="$(
     git -C "$ROOT" rev-parse HEAD
 )" || die "Cannot read current checkout"
 
-CURRENT_COMMIT="${CURRENT_COMMIT,,}"
+CURRENT_COMMIT=$(echo "$CURRENT_COMMIT" | tr '[:upper:]' '[:lower:]')
 
 # Fast path: exact version, verified baseline, and usable executable.
 if [[ "$CURRENT_COMMIT" == "$TARGET_COMMIT" &&

@@ -1,3 +1,6 @@
+# Corrosion only installs CMake scripts, no binaries: build once.
+set(VCPKG_BUILD_TYPE release)
+
 vcpkg_from_github(
     OUT_SOURCE_PATH CORROSION_SOURCE
     REPO "corrosion-rs/corrosion"
@@ -14,3 +17,5 @@ vcpkg_cmake_configure(
 vcpkg_cmake_install()
 
 vcpkg_cmake_config_fixup(PACKAGE_NAME Corrosion CONFIG_PATH lib/cmake/Corrosion)
+
+vcpkg_install_copyright(FILE_LIST "${CORROSION_SOURCE}/LICENSE")
