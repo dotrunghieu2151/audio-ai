@@ -20,14 +20,6 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
         live-preview SLINT_FEATURE_LIVE_PREVIEW
 )
 
-# fontique -> yeslogic-fontconfig-sys links fontconfig via pkg-config on Linux, which
-# fails inside vcpkg (no fontconfig.pc visible to cargo) and, for static builds, leaves
-# -lfontconfig out of the installed Slint::Slint target. Make it dlopen libfontconfig.so
-# at runtime instead. Applies to both slint-compiler and slint_cpp.
-if(VCPKG_TARGET_IS_LINUX)
-    set(ENV{RUST_FONTCONFIG_DLOPEN} 1)
-endif()
-
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}/api/cpp"
     OPTIONS

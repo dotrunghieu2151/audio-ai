@@ -2,7 +2,7 @@ add_executable(${PROJECT_NAME}
     main.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog portaudio_static Slint::Slint)
+target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog portaudio_static Slint::Slint DTH::common)
 
 # Include asset copying utility
 include(${CMAKE_SOURCE_DIR}/cmake/utils/CopyAssets.cmake)
