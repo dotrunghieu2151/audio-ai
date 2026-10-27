@@ -1,4 +1,4 @@
-#include "DTH/common/spsc_queue.hpp"
+#include "dth/common/spsc_queue.hpp"
 
 #include <gtest/gtest.h>
 
@@ -55,7 +55,7 @@ class SpscQueue : public ::testing::Test
 
 TEST_F(SpscQueue, SingleThread)
 {
-    Core::SpscQueue<TestType, 11> q{};
+    dth::common::SpscQueue<TestType, 11> q{};
     EXPECT_EQ(q.GetSize(), 0);
     EXPECT_EQ(q.IsEmpty(), true);
     for (int i = 0; i < 10; i++) {
@@ -81,15 +81,15 @@ TEST_F(SpscQueue, SingleThread)
 
 TEST_F(SpscQueue, MultithreadFuzzTest)
 {
-    const uint64_t                        numOps     = 5000;
-    const uint64_t                        numThreads = 8;
-    Core::SpscQueue<uint64_t, numThreads> q{};
-    std::atomic<bool>                     flag(false);
-    std::vector<std::thread>              threads;
-    std::atomic<uint64_t>                 sum(0);
+    const uint64_t                               numOps     = 5000;
+    const uint64_t                               numThreads = 8;
+    dth::common::SpscQueue<uint64_t, numThreads> q{};
+    std::atomic<bool>                            flag(false);
+    std::vector<std::thread>                     threads;
+    std::atomic<uint64_t>                        sum(0);
 
     // write
-    threads.push_back(std::thread([&] {
+    threads.emplace_back([&] {
         while (!flag) {
         }
         for (auto j = 0; j < numOps; ++j) {
@@ -97,10 +97,10 @@ TEST_F(SpscQueue, MultithreadFuzzTest)
                 std::this_thread::yield();
             }
         }
-    }));
+    });
 
     // read
-    threads.push_back(std::thread([&] {
+    threads.emplace_back([&] {
         while (!flag) {
         }
         uint64_t threadSum = 0;
@@ -112,7 +112,7 @@ TEST_F(SpscQueue, MultithreadFuzzTest)
             threadSum += v;
         }
         sum += threadSum;
-    }));
+    });
     flag = true;
     for (auto& thread : threads) {
         thread.join();

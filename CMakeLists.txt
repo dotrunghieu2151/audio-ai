@@ -10,6 +10,10 @@ include(cmake/config/ProjectDefaults.cmake)
 
 #include modules
 include(ClangFormat)
+option(BUILD_TESTING "Build the testing tree." ON)
+if(BUILD_TESTING)
+  enable_testing()
+endif()
 
 # dependencies
 find_package(fmt REQUIRED)

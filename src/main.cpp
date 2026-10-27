@@ -1,6 +1,6 @@
-#include <dth/common/timer.hpp>
 
 #include "app-window.h"
+#include "dth/common/timer.hpp"
 #include "spdlog/spdlog.h"
 int main(int argc, char** argv)
 {

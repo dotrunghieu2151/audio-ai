@@ -9,10 +9,11 @@
       "binaryDir": "${sourceDir}/.build/${presetName}",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/default.cmake",
-        "CMAKE_EXPORT_COMPLE_COMMANDS": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE": "ON",
-        "CMAKE_INTERPROCEDURAL_OPTIMIZATION_FAST": "ON"
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION_FAST": "ON",
+        "BUILD_TESTING": "ON"
       },
       "environment": {
         "PATH": "$penv{PATH}",
@@ -247,6 +248,7 @@
     {
       "name": "linux-clang-test",
       "configurePreset": "linux-clang",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       },
@@ -300,6 +302,10 @@
         {
           "type": "build",
           "name": "linux-clang-debug"
+        },
+        {
+          "type": "test",
+          "name": "linux-clang-test"
         }
       ]
     }

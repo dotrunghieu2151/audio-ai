@@ -124,3 +124,12 @@ install(
     NAMESPACE DTH::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
+
+option(
+    DTH_COMMON_BUILD_TESTING
+    "Build DTH_COMMON tests"
+    ${BUILD_TESTING}
+)
+if (DTH_COMMON_BUILD_TESTING)
+  add_subdirectory(tests)
+endif()

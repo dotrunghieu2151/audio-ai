@@ -1,4 +1,4 @@
-#include "DTH/common/mpmc_queue.hpp"
+#include "dth/common/mpmc_queue.hpp"
 
 #include <gtest/gtest.h>
 
@@ -55,7 +55,7 @@ class McmpQueueTest : public ::testing::Test
 
 TEST_F(McmpQueueTest, SingleThread)
 {
-    Core::McmpQueue<TestType, 11> q{};
+    dth::common::McmpQueue<TestType, 11> q{};
     EXPECT_EQ(q.GetSize(), 0);
     EXPECT_EQ(q.IsEmpty(), true);
     for (int i = 0; i < 10; i++) {
@@ -81,16 +81,17 @@ TEST_F(McmpQueueTest, SingleThread)
 
 TEST_F(McmpQueueTest, MultithreadFuzzTest)
 {
-    const uint64_t                        numOps     = 5000;
-    const uint64_t                        numThreads = 8;
-    Core::McmpQueue<uint64_t, numThreads> q{};
-    std::atomic<bool>                     flag(false);
-    std::vector<std::thread>              threads;
-    std::atomic<uint64_t>                 sum(0);
+    const uint64_t                               numOps     = 5000;
+    const uint64_t                               numThreads = 8;
+    dth::common::McmpQueue<uint64_t, numThreads> q{};
+    std::atomic<bool>                            flag(false);
+    std::vector<std::thread>                     threads;
+    std::atomic<uint64_t>                        sum(0);
 
     // write
+    threads.reserve(numThreads);
     for (uint64_t i = 0; i < numThreads; ++i) {
-        threads.push_back(std::thread([&, i] {
+        threads.emplace_back([&, i] {
             while (!flag) {
             }
             for (auto j = i; j < numOps; j += numThreads) {
@@ -98,12 +99,12 @@ TEST_F(McmpQueueTest, MultithreadFuzzTest)
                     std::this_thread::yield();
                 }
             }
-        }));
+        });
     }
 
     // read
     for (uint64_t i = 0; i < numThreads; ++i) {
-        threads.push_back(std::thread([&, i] {
+        threads.emplace_back([&, i] {
             while (!flag) {
             }
             uint64_t threadSum = 0;
@@ -115,7 +116,7 @@ TEST_F(McmpQueueTest, MultithreadFuzzTest)
                 threadSum += v;
             }
             sum += threadSum;
-        }));
+        });
     }
     flag = true;
     for (auto& thread : threads) {
