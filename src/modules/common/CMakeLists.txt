@@ -54,6 +54,13 @@ target_include_directories(
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
+if (DTH_ENABLE_SANITIZERS)
+  # This keeps the dependency available in the current build
+  # while excluding it from both build-tree and install-tree exports.
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE "$<BUILD_LOCAL_INTERFACE:DTH::sanitizers>"
+  )
+endif()
 
 set_property(
     TARGET ${PROJECT_NAME}

@@ -1,6 +1,5 @@
 # set standard flags, C++ version, warnings
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 # Add custom configuration type: Fast
 if(NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Fast" CACHE STRING "Build configs" FORCE)

@@ -7,6 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 # include cmake Macros/functions/shared configs/utils
 include(cmake/config/ProjectDefaults.cmake)
+include(cmake/modules/Sanitizers.cmake)
 
 #include modules
 include(ClangFormat)

@@ -24,11 +24,12 @@ set(TESTS
 foreach(t IN LISTS TESTS)
   add_executable(${t} ${t}.cpp)
   target_link_libraries(${t} PRIVATE GTest::gtest_main DTH::common)
+
+  if (DTH_ENABLE_SANITIZERS)
+    target_link_libraries(${t} PRIVATE DTH::sanitizers)
+  endif()
   gtest_discover_tests(${t})
 endforeach()
 
 # Link with Gtest
 # target_link_libraries(AllTests PRIVATE GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
-
-
-

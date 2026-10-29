@@ -3,6 +3,9 @@ add_executable(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog portaudio_static Slint::Slint DTH::common)
+if (DTH_ENABLE_SANITIZERS)
+  target_link_libraries(${PROJECT_NAME} PUBLIC DTH::sanitizers)
+endif()
 
 # Include asset copying utility
 include(${CMAKE_SOURCE_DIR}/cmake/utils/CopyAssets.cmake)
