@@ -124,7 +124,9 @@
         "CMAKE_CXX_FLAGS_INIT": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -fvisibility=hidden -fPIC",
         "CMAKE_CXX_FLAGS_DEBUG_INIT": "-O0 -g3 -DDEBUG",
         "CMAKE_CXX_FLAGS_RELEASE_INIT": "-O3 -DNDEBUG -march=native -mtune=native",
-        "CMAKE_CXX_FLAGS_FAST_INIT": "-Ofast -DNDEBUG -march=native -mtune=native -funroll-loops -ffast-math"
+        "CMAKE_CXX_FLAGS_FAST_INIT": "-Ofast -DNDEBUG -march=native -mtune=native -funroll-loops -ffast-math",
+        "DTH_ENABLE_SANITIZERS": "ON",
+        "DTH_SANITIZERS": "address;undefined"
       }
     }
   ],
