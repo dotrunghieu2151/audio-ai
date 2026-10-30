@@ -313,6 +313,23 @@
           "name": "linux-clang-test"
         }
       ]
+    },
+    {
+      "name": "macos-debug",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "macos"
+        },
+        {
+          "type": "build",
+          "name": "macos-debug"
+        },
+        {
+          "type": "test",
+          "name": "macos-test"
+        }
+      ]
     }
   ]
 }
