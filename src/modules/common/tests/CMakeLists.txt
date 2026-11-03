@@ -26,7 +26,7 @@ foreach(t IN LISTS TESTS)
   target_link_libraries(${t} PRIVATE GTest::gtest_main DTH::common)
 
   if (DTH_ENABLE_SANITIZERS)
-    target_link_libraries(${t} PRIVATE DTH::sanitizers)
+    target_link_libraries(${t} PUBLIC DTH::sanitizers)
   endif()
   gtest_discover_tests(${t})
 endforeach()

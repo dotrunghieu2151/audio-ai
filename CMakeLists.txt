@@ -26,6 +26,7 @@ get_target_property(slint_enabled_features Slint::Slint SLINT_ENABLED_FEATURES)
 message(STATUS "Slint enabled features: ${slint_enabled_features}")
 # subdirectories
 add_subdirectory(src/modules/common)
+add_subdirectory(src/modules/audio)
 
 # find_package(dth_common REQUIRED)
 add_subdirectory(src)

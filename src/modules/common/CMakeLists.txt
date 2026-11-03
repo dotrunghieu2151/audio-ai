@@ -58,7 +58,7 @@ if (DTH_ENABLE_SANITIZERS)
   # This keeps the dependency available in the current build
   # while excluding it from both build-tree and install-tree exports.
   target_link_libraries(${PROJECT_NAME}
-    PRIVATE "$<BUILD_LOCAL_INTERFACE:DTH::sanitizers>"
+   PUBLIC "$<BUILD_LOCAL_INTERFACE:DTH::sanitizers>"
   )
 endif()
 

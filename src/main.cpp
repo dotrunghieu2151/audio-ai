@@ -12,6 +12,5 @@ int main(int argc, char** argv)
 
         ui->run();
     }  // ui is destroyed here
-    auto timed = timer.stop_ms();
-    spdlog::info("Hello, Worldi! {}", timed);
+    spdlog::info("hi there {}", timer.stop_ms());
 }
