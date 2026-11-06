@@ -2,7 +2,7 @@ add_executable(${PROJECT_NAME}
     main.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog portaudio_static Slint::Slint DTH::common)
+target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt spdlog::spdlog portaudio_static Slint::Slint DTH::common DTH::audio)
 if (DTH_ENABLE_SANITIZERS)
   target_link_libraries(${PROJECT_NAME} PUBLIC DTH::sanitizers)
 endif()

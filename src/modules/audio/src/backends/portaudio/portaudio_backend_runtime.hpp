@@ -8,12 +8,11 @@
 #include <string>
 
 #include "dth/audio/audio_error.hpp"
-#include "internal/audio_backend_runtime.hpp"
 namespace dth::audio {
-class PortAudioBackendRuntime final : public IAudioBackendRuntime
+class PortAudioBackendRuntime final
 {
   public:
-    ~PortAudioBackendRuntime() override
+    ~PortAudioBackendRuntime()
     {
         const auto err = Pa_Terminate();
         if (err != paNoError) {
@@ -27,7 +26,7 @@ class PortAudioBackendRuntime final : public IAudioBackendRuntime
     PortAudioBackendRuntime(PortAudioBackendRuntime&&)            = default;
     PortAudioBackendRuntime& operator=(PortAudioBackendRuntime&&) = default;
 
-    std::expected<void, AudioError> initialize() override
+    std::expected<void, AudioError> initialize()
     {
         if (_initialized) {
             return {};

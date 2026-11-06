@@ -59,9 +59,9 @@ StreamResult PortAudioStreamHandle::validate_pa_stream_output_params(
 
 StreamResult PortAudioStreamHandle::validate_stream_config(const StreamConfig& config)
 {
-    if (config.sample_rate <= 0 || config.frames_per_buffer == 0) {
-        return std::unexpected(AudioError(AudioErrorCode::unsupported_configuration,
-                                          "Invalid sample rate or frames per buffer config"));
+    if (config.sample_rate <= 0) {
+        return std::unexpected(
+            AudioError(AudioErrorCode::unsupported_configuration, "Invalid sample rate  config"));
     }
 
     if (config.input.has_value()) {
@@ -92,11 +92,11 @@ StreamResult PortAudioStreamHandle::open()
         return validationResult;
     }
 
-    const PaError error =
-        Pa_OpenStream(&_stream, _config.input.has_value() ? &_config.input.value() : nullptr,
-                      _config.output.has_value() ? &_config.output.value() : nullptr,
-                      _config.sample_rate, _config.frames_per_buffer, _config.stream_flags,
-                      &PortAudioStreamHandle::portaudio_callback, this);
+    const PaError error = Pa_OpenStream(
+        &_stream, _config.input.has_value() ? &_config.input.value() : nullptr,
+        _config.output.has_value() ? &_config.output.value() : nullptr, _config.sample_rate,
+        _config.frames_per_buffer == 0 ? paFramesPerBufferUnspecified : _config.frames_per_buffer,
+        _config.stream_flags, &PortAudioStreamHandle::portaudio_callback, this);
     if (error != paNoError) {
         _stream = nullptr;
 
@@ -104,7 +104,7 @@ StreamResult PortAudioStreamHandle::open()
             AudioError(AudioErrorCode::stream_open_failed, "Pa_OpenStream failed", error));
     }
 
-    _state.store(StreamState::open, std::memory_order_release);
+    _state->store(StreamState::open, std::memory_order_release);
 
     return {};
 }
@@ -125,7 +125,7 @@ StreamResult PortAudioStreamHandle::start()
             AudioError(AudioErrorCode::stream_start_failed, "Pa_StartStream failed", error));
     }
 
-    _state.store(StreamState::running, std::memory_order_release);
+    _state->store(StreamState::running, std::memory_order_release);
     return {};
 }
 StreamResult PortAudioStreamHandle::stop()
@@ -145,14 +145,14 @@ StreamResult PortAudioStreamHandle::stop()
             AudioError(AudioErrorCode::stream_stop_failed, "Pa_StopStream failed", error));
     }
 
-    _state.store(StreamState::stopped, std::memory_order_release);
+    _state->store(StreamState::stopped, std::memory_order_release);
 
     return {};
 }
 StreamResult PortAudioStreamHandle::close()
 {
     if (_stream == nullptr) {
-        _state.store(StreamState::closed, std::memory_order_release);
+        _state->store(StreamState::closed, std::memory_order_release);
         return {};
     }
 
@@ -173,22 +173,22 @@ StreamResult PortAudioStreamHandle::close()
 
     _stream = nullptr;
 
-    _state.store(StreamState::closed, std::memory_order_release);
+    _state->store(StreamState::closed, std::memory_order_release);
 
     return {};
 }
 
 bool PortAudioStreamHandle::is_open() const noexcept
 {
-    return _state.load(std::memory_order_acquire) == StreamState::open;
+    return _state->load(std::memory_order_acquire) == StreamState::open;
 }
 bool PortAudioStreamHandle::is_running() const noexcept
 {
-    return _state.load(std::memory_order_acquire) == StreamState::running;
+    return _state->load(std::memory_order_acquire) == StreamState::running;
 }
 bool PortAudioStreamHandle::is_stopped() const noexcept
 {
-    return _state.load(std::memory_order_acquire) == StreamState::stopped;
+    return _state->load(std::memory_order_acquire) == StreamState::stopped;
 }
 
 int PortAudioStreamHandle::portaudio_callback(const void* input, void* output,

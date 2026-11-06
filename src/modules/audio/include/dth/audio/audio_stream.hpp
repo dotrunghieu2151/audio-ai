@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>
 
 #include "dth/audio/audio-types.hpp"
@@ -23,7 +24,7 @@ class AudioStream
     bool is_running() const noexcept;
 
     [[nodiscard]]
-    StreamState state() const noexcept;
+    bool is_stopped() const noexcept;
 
     [[nodiscard]]
     StreamResult open();
@@ -47,5 +48,7 @@ class AudioStream
     explicit AudioStream(std::unique_ptr<Impl> impl);
 
     friend class AudioSystem;
+
+    friend struct AudioStreamImplValidator;
 };
 }  // namespace dth::audio

@@ -8,26 +8,14 @@
 #include "dth_audio/export_dth_audio.hpp"
 
 namespace dth::audio {
-class DTH_AUDIO_EXPORT AudioDevice
+struct DTH_AUDIO_EXPORT AudioDevice
 {
-  public:
-    [[nodiscard]] std::string_view name() const noexcept;
-    [[nodiscard]] std::string_view host_api() const noexcept;
-
-    [[nodiscard]] bool supports_input() const noexcept;
-    [[nodiscard]] bool supports_output() const noexcept;
-
-    [[nodiscard]] std::uint32_t max_input_channels() const noexcept;
-    [[nodiscard]] std::uint32_t max_output_channels() const noexcept;
-
-    [[nodiscard]] std::vector<double> supported_sample_rates() const;
-
-  private:
-    friend class AudioSystem;
-
-    std::uint32_t _id;
-    std::string   _name;
-    std::string   _host_api;
+    std::uint32_t id;
+    std::string   name;
+    std::string   host_api;
     // Additional metadata.
+    std::uint32_t max_input_channels;
+    std::uint32_t max_output_channels;
+    double        default_sample_rate;
 };
 }  // namespace dth::audio

@@ -8,7 +8,7 @@ struct AudioBufferView
 {
     const float* data = nullptr;
 
-    std::uint32_t frames   = 0;
+    unsigned long frames   = 0;
     std::uint32_t channels = 0;
 
     [[nodiscard]]
@@ -22,7 +22,7 @@ struct MutableAudioBufferView
 {
     float* data = nullptr;
 
-    std::uint32_t frames   = 0;
+    unsigned long frames   = 0;
     std::uint32_t channels = 0;
 
     [[nodiscard]]

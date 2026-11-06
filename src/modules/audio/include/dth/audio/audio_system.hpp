@@ -49,6 +49,8 @@ class DTH_AUDIO_EXPORT AudioSystem
   private:
     class Impl;
     std::unique_ptr<Impl> _impl;
+
+    friend struct AudioSystemImplValidator;
 };
 
 }  // namespace dth::audio
