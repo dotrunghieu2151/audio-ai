@@ -25,6 +25,8 @@ bool AudioStream::is_running() const noexcept { return _impl->is_running(); }
 
 bool AudioStream::is_stopped() const noexcept { return _impl->is_stopped(); }
 
+bool AudioStream::is_closed() const noexcept { return _impl->is_closed(); }
+
 StreamResult AudioStream::open() { return _impl->open(); }
 
 StreamResult AudioStream::start() { return _impl->start(); }

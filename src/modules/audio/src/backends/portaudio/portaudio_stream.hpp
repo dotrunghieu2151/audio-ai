@@ -57,6 +57,7 @@ class PortAudioStreamHandle final
     [[nodiscard]] bool is_open() const noexcept;
     [[nodiscard]] bool is_running() const noexcept;
     [[nodiscard]] bool is_stopped() const noexcept;
+    [[nodiscard]] bool is_closed() const noexcept;
 
   private:
     [[nodiscard]] static StreamResult validate_stream_config(const StreamConfig& config);

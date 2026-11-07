@@ -27,6 +27,9 @@ class AudioStream
     bool is_stopped() const noexcept;
 
     [[nodiscard]]
+    bool is_closed() const noexcept;
+
+    [[nodiscard]]
     StreamResult open();
 
     [[nodiscard]]

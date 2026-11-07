@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <atomic>
 #include <csignal>
 
@@ -31,13 +32,32 @@ int main(int argc, char** argv)
     dth::audio::AudioSystem audioSystem{};
     auto                    inputDevice{audioSystem.default_input_device()};
     auto                    outputDevice{audioSystem.default_output_device()};
+    auto                    devices{audioSystem.devices()};
+    for (const auto& device : devices) {
+        spdlog::info("Device: {} | ID: {} | Mode: {}", device.name, device.id,
+                     device.max_input_channels > 0 ? "input" : "output");
+        if (device.id == 2) {
+            outputDevice = device;
+        }
+        if (device.id == 3) {
+            inputDevice = device;
+        }
+    }
+    if (!inputDevice.has_value() || !outputDevice.has_value()) {
+        spdlog::info("No input or output device found");
+        return 1;
+    }
+
+    spdlog::info("Input device found: {}", inputDevice.value().name);
+    spdlog::info("Output device found: {}", outputDevice.value().name);
 
     dth::common::Timer timer{};
     auto               stream = audioSystem.make_stream(
         inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
         [](void*, dth::audio::DuplexAudioBufferView buffer) noexcept {
             for (auto data : buffer.input.samples()) {
-                *buffer.output.data++ = data;
+                std::fill_n(buffer.output.data, buffer.output.channels, data);
+                buffer.output.data += buffer.output.channels;
             }
             return dth::audio::CallbackResult::continue_stream;
         },
@@ -58,7 +78,7 @@ int main(int argc, char** argv)
         return 1;
     }
     while (keep_running && stream.is_running()) {
-        spdlog::info("Recording...");
+        // spdlog::info("Recording...");
     }
     spdlog::info("hi there {}", timer.stop_ms());
     return 0;

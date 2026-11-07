@@ -17,6 +17,8 @@ class AudioStream::Impl
 
     bool is_stopped() const noexcept { return _handle.is_stopped(); }
 
+    bool is_closed() const noexcept { return _handle.is_closed(); }
+
     StreamResult open() { return _handle.open(); }
 
     StreamResult start() { return _handle.start(); };

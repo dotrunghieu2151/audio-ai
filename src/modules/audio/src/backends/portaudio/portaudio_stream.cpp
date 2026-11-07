@@ -21,10 +21,12 @@ PortAudioStreamHandle::PortAudioStreamHandle(std::shared_ptr<PortAudioBackendRun
 
 PortAudioStreamHandle::~PortAudioStreamHandle()
 {
-    const auto result = close();
-    if (!result.has_value()) {
-        // log error here
-        std::cout << "failed to destruct stream";
+    if (_state && !is_closed()) {
+        const auto result = close();
+        if (!result.has_value()) {
+            // log error here
+            std::cout << "failed to destruct stream";
+        }
     }
 }
 
@@ -189,6 +191,11 @@ bool PortAudioStreamHandle::is_running() const noexcept
 bool PortAudioStreamHandle::is_stopped() const noexcept
 {
     return _state->load(std::memory_order_acquire) == StreamState::stopped;
+}
+
+bool PortAudioStreamHandle::is_closed() const noexcept
+{
+    return _state->load(std::memory_order_acquire) == StreamState::closed;
 }
 
 int PortAudioStreamHandle::portaudio_callback(const void* input, void* output,

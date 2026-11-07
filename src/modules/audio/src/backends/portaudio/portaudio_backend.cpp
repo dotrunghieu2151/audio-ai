@@ -10,6 +10,7 @@ namespace dth::audio {
 PortAudioBackend::PortAudioBackend(std::shared_ptr<PortAudioBackendRuntime> runtime)
     : _runtime{std::move(runtime)}
 {
+    _runtime->initialize();
 }
 
 std::vector<AudioDevice> PortAudioBackend::enumerate_devices() const

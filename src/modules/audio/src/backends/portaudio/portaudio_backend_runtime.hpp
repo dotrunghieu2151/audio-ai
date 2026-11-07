@@ -12,6 +12,8 @@ namespace dth::audio {
 class PortAudioBackendRuntime final
 {
   public:
+    PortAudioBackendRuntime() = default;
+
     ~PortAudioBackendRuntime()
     {
         const auto err = Pa_Terminate();

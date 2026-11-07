@@ -6,7 +6,7 @@
 namespace dth::audio {
 struct AudioBufferView
 {
-    const float* data = nullptr;
+    float const* data = nullptr;
 
     unsigned long frames   = 0;
     std::uint32_t channels = 0;
