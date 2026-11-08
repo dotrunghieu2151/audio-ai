@@ -1,0 +1,12 @@
+{
+  "name": "cubeb",
+  "version-string": "1.0.0",
+  "description": "Mozilla cubed audio backend",
+  "homepage": "https://github.com/mozilla/cubeb",
+  "dependencies": ["vcpkg-cmake", "vcpkg-cmake-config"],
+  "features": {
+    "use-rust-libs": {
+      "description": "Enable rust libs"
+    }
+  }
+}

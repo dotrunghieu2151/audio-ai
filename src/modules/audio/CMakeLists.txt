@@ -44,6 +44,7 @@ target_sources(
 target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common)
 
 add_subdirectory(src/backends/portaudio)
+add_subdirectory(src/backends/cubeb)
 
 # define the C++ standard needed to compile this library and make it visible to
 # dependers

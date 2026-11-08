@@ -21,6 +21,7 @@ find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(portaudio CONFIG REQUIRED)
 find_package(Slint CONFIG REQUIRED)
+find_package(cubeb CONFIG REQUIRED)
 
 get_target_property(slint_enabled_features Slint::Slint SLINT_ENABLED_FEATURES)
 message(STATUS "Slint enabled features: ${slint_enabled_features}")
