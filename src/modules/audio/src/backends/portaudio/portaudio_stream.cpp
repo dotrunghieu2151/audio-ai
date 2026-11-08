@@ -14,14 +14,15 @@ PortAudioStreamHandle::PortAudioStreamHandle(std::shared_ptr<PortAudioBackendRun
                                              void* userData)
     : _config{config},
       _runtime{std::move(runtime)},
-      _userData{userData},
-      _callback{std::move(callback)}
+      _context{std::make_unique<CallbackContext>()}
 {
+    _context->callback  = std::move(callback);
+    _context->user_data = userData;
 }
 
 PortAudioStreamHandle::~PortAudioStreamHandle()
 {
-    if (_state && !is_closed()) {
+    if (_context && !is_closed()) {
         const auto result = close();
         if (!result.has_value()) {
             // log error here
@@ -98,7 +99,7 @@ StreamResult PortAudioStreamHandle::open()
         &_stream, _config.input.has_value() ? &_config.input.value() : nullptr,
         _config.output.has_value() ? &_config.output.value() : nullptr, _config.sample_rate,
         _config.frames_per_buffer == 0 ? paFramesPerBufferUnspecified : _config.frames_per_buffer,
-        _config.stream_flags, &PortAudioStreamHandle::portaudio_callback, this);
+        _config.stream_flags, &PortAudioStreamHandle::portaudio_callback, _context.get());
     if (error != paNoError) {
         _stream = nullptr;
 
@@ -106,7 +107,19 @@ StreamResult PortAudioStreamHandle::open()
             AudioError(AudioErrorCode::stream_open_failed, "Pa_OpenStream failed", error));
     }
 
-    _state->store(StreamState::open, std::memory_order_release);
+    // Fires when the stream becomes inactive, including after the callback returns
+    // paComplete/paAbort, so the state does not stay `running`.
+    const PaError finishedError =
+        Pa_SetStreamFinishedCallback(_stream, &PortAudioStreamHandle::stream_finished_callback);
+    if (finishedError != paNoError) {
+        Pa_CloseStream(_stream);
+        _stream = nullptr;
+
+        return std::unexpected(AudioError(AudioErrorCode::stream_open_failed,
+                                          "Pa_SetStreamFinishedCallback failed", finishedError));
+    }
+
+    _context->state.store(StreamState::open, std::memory_order_release);
 
     return {};
 }
@@ -120,14 +133,19 @@ StreamResult PortAudioStreamHandle::start()
     if (is_running()) {
         return {};
     }
+    // Mark running before starting so a finished callback fired right after Pa_StartStream
+    // is not overwritten.
+    const StreamState previous = _context->state.load(std::memory_order_acquire);
+    _context->state.store(StreamState::running, std::memory_order_release);
+
     const PaError error = Pa_StartStream(_stream);
 
     if (error != paNoError) {
+        _context->state.store(previous, std::memory_order_release);
         return std::unexpected(
             AudioError(AudioErrorCode::stream_start_failed, "Pa_StartStream failed", error));
     }
 
-    _state->store(StreamState::running, std::memory_order_release);
     return {};
 }
 StreamResult PortAudioStreamHandle::stop()
@@ -147,14 +165,14 @@ StreamResult PortAudioStreamHandle::stop()
             AudioError(AudioErrorCode::stream_stop_failed, "Pa_StopStream failed", error));
     }
 
-    _state->store(StreamState::stopped, std::memory_order_release);
+    _context->state.store(StreamState::stopped, std::memory_order_release);
 
     return {};
 }
 StreamResult PortAudioStreamHandle::close()
 {
     if (_stream == nullptr) {
-        _state->store(StreamState::closed, std::memory_order_release);
+        _context->state.store(StreamState::closed, std::memory_order_release);
         return {};
     }
 
@@ -175,27 +193,27 @@ StreamResult PortAudioStreamHandle::close()
 
     _stream = nullptr;
 
-    _state->store(StreamState::closed, std::memory_order_release);
+    _context->state.store(StreamState::closed, std::memory_order_release);
 
     return {};
 }
 
 bool PortAudioStreamHandle::is_open() const noexcept
 {
-    return _state->load(std::memory_order_acquire) == StreamState::open;
+    return _context->state.load(std::memory_order_acquire) == StreamState::open;
 }
 bool PortAudioStreamHandle::is_running() const noexcept
 {
-    return _state->load(std::memory_order_acquire) == StreamState::running;
+    return _context->state.load(std::memory_order_acquire) == StreamState::running;
 }
 bool PortAudioStreamHandle::is_stopped() const noexcept
 {
-    return _state->load(std::memory_order_acquire) == StreamState::stopped;
+    return _context->state.load(std::memory_order_acquire) == StreamState::stopped;
 }
 
 bool PortAudioStreamHandle::is_closed() const noexcept
 {
-    return _state->load(std::memory_order_acquire) == StreamState::closed;
+    return _context->state.load(std::memory_order_acquire) == StreamState::closed;
 }
 
 int PortAudioStreamHandle::portaudio_callback(const void* input, void* output,
@@ -204,8 +222,16 @@ int PortAudioStreamHandle::portaudio_callback(const void* input, void* output,
                                               PaStreamCallbackFlags           status_flags,
                                               void*                           user_data) noexcept
 {
-    auto* self = static_cast<PortAudioStreamHandle*>(user_data);
-    return CallBackToPaStreamResultMapping::map(
-        self->_callback(input, output, frame_count, time_info, status_flags, self->_userData));
+    auto* context = static_cast<CallbackContext*>(user_data);
+    return CallBackToPaStreamResultMapping::map(context->callback(
+        input, output, frame_count, time_info, status_flags, context->user_data));
+}
+
+void PortAudioStreamHandle::stream_finished_callback(void* user_data) noexcept
+{
+    auto* context  = static_cast<CallbackContext*>(user_data);
+    auto  expected = StreamState::running;
+    context->state.compare_exchange_strong(expected, StreamState::stopped,
+                                           std::memory_order_acq_rel);
 }
 }  // namespace dth::audio

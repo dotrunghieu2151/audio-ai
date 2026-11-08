@@ -36,10 +36,10 @@ int main(int argc, char** argv)
     for (const auto& device : devices) {
         spdlog::info("Device: {} | ID: {} | Mode: {}", device.name, device.id,
                      device.max_input_channels > 0 ? "input" : "output");
-        if (device.id == 2) {
+        if (device.id == 4) {
             outputDevice = device;
         }
-        if (device.id == 3) {
+        if (device.id == 0) {
             inputDevice = device;
         }
     }
