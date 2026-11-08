@@ -42,7 +42,6 @@ if ("use-rust-libs" IN_LIST FEATURES)
         COMMAND
             "${CARGO_EXECUTABLE}"
             build
-            --offline
             --features=gecko-in-tree
         WORKING_DIRECTORY
             "${SOURCE_PATH}/src/cubeb-coreaudio-rs"
@@ -55,7 +54,6 @@ if ("use-rust-libs" IN_LIST FEATURES)
         COMMAND
             "${CARGO_EXECUTABLE}"
             build
-            --offline
             --release
             --features=gecko-in-tree
         WORKING_DIRECTORY
@@ -81,7 +79,6 @@ if ("use-rust-libs" IN_LIST FEATURES)
         COMMAND
             "${CARGO_EXECUTABLE}"
             build
-            --offline
             --features=gecko-in-tree
         WORKING_DIRECTORY
             "${SOURCE_PATH}/src/cubeb-pulse-rs"
@@ -94,7 +91,6 @@ if ("use-rust-libs" IN_LIST FEATURES)
         COMMAND
             "${CARGO_EXECUTABLE}"
             build
-            --offline
             --release
             --features=gecko-in-tree
         WORKING_DIRECTORY

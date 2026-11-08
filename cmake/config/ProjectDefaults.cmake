@@ -7,6 +7,9 @@ else()
   list(APPEND CMAKE_CONFIGURATION_TYPES Fast)
 endif()
 
+# Imported targets (vcpkg) only ship Debug/Release; map Fast to Release
+set(CMAKE_MAP_IMPORTED_CONFIG_FAST Release "")
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 

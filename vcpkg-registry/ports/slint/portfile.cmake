@@ -36,5 +36,29 @@ vcpkg_cmake_config_fixup(
     PACKAGE_NAME slint
     CONFIG_PATH lib/cmake/Slint
 )
+
+# SlintConfig.cmake only sets a config-less IMPORTED_LOCATION pointing at the release
+# lib/. Map Debug to debug/lib so Debug consumers don't mix release Slint with other
+# ports' debug libs (causes "cycle in the constraint graph" rpath warnings).
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/slint/SlintConfig.cmake"
+    "\nset(_IMPORT_PREFIX)\n"
+    [[
+
+foreach(_slint_prop IMPORTED_LOCATION IMPORTED_IMPLIB)
+  get_target_property(_slint_val slint_cpp-shared ${_slint_prop})
+  if(_slint_val)
+    string(REPLACE "${_IMPORT_PREFIX}/lib/" "${_IMPORT_PREFIX}/debug/lib/" _slint_dbg "${_slint_val}")
+    if(EXISTS "${_slint_dbg}")
+      set_target_properties(slint_cpp-shared PROPERTIES ${_slint_prop}_DEBUG "${_slint_dbg}")
+    endif()
+  endif()
+endforeach()
+unset(_slint_prop)
+unset(_slint_val)
+unset(_slint_dbg)
+
+set(_IMPORT_PREFIX)
+]]
+)
 file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}")
 vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSES")
