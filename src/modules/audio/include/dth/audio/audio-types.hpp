@@ -17,4 +17,8 @@ using InputCallback = CallbackResult (*)(void* user_data, AudioBufferView) noexc
 using OutputCallback = CallbackResult (*)(void* user_data, MutableAudioBufferView) noexcept;
 
 using DuplexCallback = CallbackResult (*)(void* user_data, DuplexAudioBufferView) noexcept;
+
+// Consumer of a pipeline stream (e.g. system audio), on the source's real-time thread. A
+// capture-less noexcept lambda converts implicitly. Result: see AudioSink::write.
+using SinkCallback = CallbackResult (*)(void* user_data, AudioBufferView) noexcept;
 }  // namespace dth::audio

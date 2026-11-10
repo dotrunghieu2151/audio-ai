@@ -39,9 +39,39 @@ target_sources(
     PRIVATE
       src/audio_system.cpp
       src/audio_stream.cpp
+      src/pipeline/format_converter.cpp
+      src/pipeline/drift_controller.cpp
+      src/pipeline/device_output_sink.cpp
+      src/pipeline/device_input_source.cpp
+      src/pipeline/converting_sink.cpp
+      src/pipeline/pipeline_stream.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common)
+
+# speexdsp ships no CMake package config (pkg-config only).
+include(SelectLibraryConfigurations)
+find_path(SPEEXDSP_INCLUDE_DIR speex/speex_resampler.h REQUIRED)
+find_library(SPEEXDSP_LIBRARY_RELEASE NAMES speexdsp REQUIRED
+  PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib" NO_DEFAULT_PATH)
+find_library(SPEEXDSP_LIBRARY_DEBUG NAMES speexdsp
+  PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib" NO_DEFAULT_PATH)
+select_library_configurations(SPEEXDSP)
+target_include_directories(${PROJECT_NAME} PRIVATE ${SPEEXDSP_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${SPEEXDSP_LIBRARIES})
+
+# System audio capture: Core Audio process taps (Objective-C++) on macOS, stub elsewhere.
+if (APPLE)
+  enable_language(OBJCXX)
+  target_sources(${PROJECT_NAME} PRIVATE src/system_audio/macos/system_audio_source_macos.mm)
+  set_source_files_properties(src/system_audio/macos/system_audio_source_macos.mm
+    PROPERTIES COMPILE_OPTIONS "-fobjc-arc;-Wall;-Wextra;-Wpedantic;-Wshadow;-Wconversion")
+  # Preset CXX flags / visibility do not apply to OBJCXX.
+  set_property(TARGET ${PROJECT_NAME} PROPERTY OBJCXX_VISIBILITY_PRESET "hidden")
+  target_link_libraries(${PROJECT_NAME} PRIVATE "-framework CoreAudio" "-framework Foundation")
+else()
+  target_sources(${PROJECT_NAME} PRIVATE src/system_audio/unsupported/system_audio_source_unsupported.cpp)
+endif()
 
 add_subdirectory(src/backends/portaudio)
 add_subdirectory(src/backends/cubeb)

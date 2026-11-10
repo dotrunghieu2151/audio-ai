@@ -128,6 +128,15 @@
         "DTH_ENABLE_SANITIZERS": "ON",
         "DTH_SANITIZERS": "address;undefined"
       }
+    },
+    {
+      "name": "macos-tsan",
+      "inherits": "macos",
+      "displayName": "MacOS TSan",
+      "description": "MacOS (Clang) with ThreadSanitizer (cannot be combined with ASan)",
+      "cacheVariables": {
+        "DTH_SANITIZERS": "thread"
+      }
     }
   ],
   "buildPresets": [
@@ -214,6 +223,13 @@
       "displayName": "Fast",
       "description": "Build the project with Ninja in Fast mode on MacOS",
       "configuration": "Fast"
+    },
+    {
+      "name": "macos-tsan-debug",
+      "configurePreset": "macos-tsan",
+      "displayName": "Debug (TSan)",
+      "description": "Build the project with Ninja in Debug mode with ThreadSanitizer on MacOS",
+      "configuration": "Debug"
     }
   ],
   "testPresets": [
@@ -265,6 +281,18 @@
     {
       "name": "macos-test",
       "configurePreset": "macos",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    },
+    {
+      "name": "macos-tsan-test",
+      "configurePreset": "macos-tsan",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       },
@@ -328,6 +356,23 @@
         {
           "type": "test",
           "name": "macos-test"
+        }
+      ]
+    },
+    {
+      "name": "macos-tsan-debug",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "macos-tsan"
+        },
+        {
+          "type": "build",
+          "name": "macos-tsan-debug"
+        },
+        {
+          "type": "test",
+          "name": "macos-tsan-test"
         }
       ]
     }

@@ -2,14 +2,17 @@
 
 #include <memory>
 
-// #include "backends/portaudio/audio_stream_portaudio_impl.hpp"
-#include "backends/cubeb/audio_stream_cubeb_impl.hpp"
+#include "audio_stream_impl.hpp"
 #include "internal/audio_stream_impl_concept.hpp"
 
 namespace dth::audio {
 
 struct AudioStreamImplValidator
 {
+    static_assert(AudioStreamImpl<BackendStreamHandle>,
+                  "BackendStreamHandle does not satisfy AudioStreamImpl constraints");
+    static_assert(AudioStreamImpl<PipelineStream>,
+                  "PipelineStream does not satisfy AudioStreamImpl constraints");
     static_assert(AudioStreamImpl<AudioStream::Impl>,
                   "AudioStream::Impl does not satisfy AudioStreamImpl constraints");
 };

@@ -16,6 +16,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 set(TESTS
     mpmc_queue.test
     spsc_queue.test
+    spsc_ring_buffer.test
     sparse_storage.test
     paged_sparse_storage.test
     sparse_set.test

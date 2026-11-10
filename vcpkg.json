@@ -6,7 +6,9 @@
     { "name": "spdlog", "version>=": "1.17.0#1" },
     { "name": "portaudio", "version>=": "19.7#9" },
     { "name": "gtest", "version>=": "1.18.0#0" },
+    { "name": "benchmark", "version>=": "1.9.5#0" },
     { "name": "slint", "version>=": "1.18.1#0", "features": ["live-preview"] },
-    { "name": "cubeb", "version>=": "1.0.0#0", "features": ["use-rust-libs"] }
+    { "name": "cubeb", "version>=": "1.0.0#0", "features": ["use-rust-libs"] },
+    { "name": "speexdsp", "version>=": "1.2.1#1" }
   ]
 }

@@ -1,12 +1,16 @@
 #pragma once
 
 #include <concepts>
+#include <memory>
 #include <optional>
 #include <vector>
 
 #include "dth/audio/audio-types.hpp"
 #include "dth/audio/audio_device.hpp"
+#include "dth/audio/audio_sink.hpp"
+#include "dth/audio/audio_source.hpp"
 #include "dth/audio/audio_stream.hpp"
+#include "dth/audio/pipeline_config.hpp"
 #include "dth/audio/stream_config.hpp"
 
 namespace dth::audio {
@@ -15,7 +19,8 @@ concept AudioSystemImpl = requires(
     T& impl, const AudioDevice& inputDevice, const AudioDevice& outputDevice,
     const InputStreamConfig& inputConfig, InputCallback inputCallback,
     const OutputStreamConfig& outputConfig, OutputCallback outputCallback,
-    const DuplexStreamConfig& duplexConfig, DuplexCallback duplexCallback, void* userData) {
+    const DuplexStreamConfig& duplexConfig, DuplexCallback duplexCallback, void* userData,
+    const OutputSinkConfig& outputSinkConfig) {
     { impl.devices() } -> std::same_as<std::vector<AudioDevice>>;
     { impl.default_input_device() } -> std::same_as<std::optional<AudioDevice>>;
     { impl.default_output_device() } -> std::same_as<std::optional<AudioDevice>>;
@@ -28,5 +33,11 @@ concept AudioSystemImpl = requires(
     {
         impl.make_stream(inputDevice, outputDevice, duplexConfig, duplexCallback, userData)
     } -> std::same_as<AudioStream>;
+    {
+        impl.make_output_sink(outputDevice, outputSinkConfig)
+    } -> std::same_as<std::unique_ptr<AudioSink>>;
+    {
+        impl.make_input_source(inputDevice, inputConfig)
+    } -> std::same_as<std::unique_ptr<AudioSource>>;
 };
 }  // namespace dth::audio

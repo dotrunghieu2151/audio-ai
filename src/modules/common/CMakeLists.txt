@@ -140,3 +140,12 @@ option(
 if (DTH_COMMON_BUILD_TESTING)
   add_subdirectory(tests)
 endif()
+
+option(
+    DTH_COMMON_BUILD_BENCHMARKS
+    "Build DTH_COMMON benchmarks"
+    OFF
+)
+if (DTH_COMMON_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()
