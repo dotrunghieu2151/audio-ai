@@ -9,6 +9,7 @@
     { "name": "benchmark", "version>=": "1.9.5#0" },
     { "name": "slint", "version>=": "1.18.1#0", "features": ["live-preview"] },
     { "name": "cubeb", "version>=": "1.0.0#0", "features": ["use-rust-libs"] },
-    { "name": "speexdsp", "version>=": "1.2.1#1" }
+    { "name": "speexdsp", "version>=": "1.2.1#1" },
+    { "name": "audio-cpp", "version>=": "0.9.5#0", "features": ["metal"] }
   ]
 }

@@ -1,0 +1,10 @@
+The package audio-cpp provides CMake targets:
+
+    find_package(audiocpp CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE audiocpp::audiocpp)
+
+The C API is declared in <audiocpp.h>. See https://github.com/0xShug0/audio.cpp/blob/main/docs/c_api.md
+
+With the "espeak" feature, eSpeak data is installed at share/audiocpp/espeak-ng-data.bin.
+Static eSpeak looks for it next to the running executable, so copy it beside your
+binary or pass it as the `espeak_data_path` session option.

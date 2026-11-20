@@ -7,6 +7,15 @@ if (DTH_ENABLE_SANITIZERS)
   target_link_libraries(${PROJECT_NAME} PUBLIC DTH::sanitizers)
 endif()
 
+
+add_executable(transcribe
+    transcribe.cpp
+)
+
+target_link_libraries(transcribe PRIVATE fmt::fmt spdlog::spdlog Slint::Slint DTH::common DTH::audio)
+if (DTH_ENABLE_SANITIZERS)
+  target_link_libraries(${PROJECT_NAME} PUBLIC DTH::sanitizers)
+endif()
 # Include asset copying utility
 include(${CMAKE_SOURCE_DIR}/cmake/utils/CopyAssets.cmake)
 

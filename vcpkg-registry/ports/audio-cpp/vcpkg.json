@@ -1,0 +1,169 @@
+{
+  "name": "audio-cpp",
+  "version": "0.9.5",
+  "description": "Local speech and audio inference (TTS, ASR, VAD, music, separation) on ggml, with a C API and CLI/server tools",
+  "homepage": "https://github.com/0xShug0/audio.cpp",
+  "license": "Apache-2.0",
+  "supports": "(windows & x64 & !uwp & !mingw & !staticcrt) | linux | osx",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ],
+  "default-features": [
+    {
+      "name": "metal",
+      "platform": "osx"
+    },
+    {
+      "name": "openmp",
+      "platform": "!osx"
+    }
+  ],
+  "features": {
+    "cuda": {
+      "description": "NVIDIA CUDA backend (requires CUDA Toolkit >= 12.0)",
+      "supports": "(windows & x64) | (linux & (x64 | arm64))",
+      "dependencies": [
+        "cuda"
+      ]
+    },
+    "espeak": {
+      "description": "Statically link eSpeak-ng 1.52.0 as the G2P phonemizer (changes the effective license of the binaries to GPL-3.0-or-later)",
+      "supports": "native",
+      "license": "GPL-3.0-or-later"
+    },
+    "hip": {
+      "description": "AMD HIP/ROCm backend (requires ROCm; set GPU_TARGETS via VCPKG_CMAKE_CONFIGURE_OPTIONS)",
+      "supports": "(windows & x64) | linux"
+    },
+    "hip-strix-halo": {
+      "description": "HIP optimizations validated only for Strix Halo (requires GPU_TARGETS=gfx1151)",
+      "dependencies": [
+        {
+          "name": "audio-cpp",
+          "default-features": false,
+          "features": [
+            "hip"
+          ]
+        }
+      ]
+    },
+    "metal": {
+      "description": "Apple Metal backend",
+      "supports": "osx"
+    },
+    "model-manager": {
+      "description": "Native model-manager tool and server download/install support (Hugging Face over HTTPS)",
+      "dependencies": [
+        {
+          "name": "audio-cpp",
+          "default-features": false,
+          "features": [
+            "tools"
+          ]
+        },
+        "openssl"
+      ]
+    },
+    "native-cpu": {
+      "description": "Build ggml CPU kernels for the host ISA (-march=native); without it, x86 kernels use a portable baseline (no AVX)"
+    },
+    "neon": {
+      "description": "Opt-in NEON library and native model paths",
+      "supports": "arm64"
+    },
+    "openmp": {
+      "description": "OpenMP host threading",
+      "supports": "!osx"
+    },
+    "rknn": {
+      "description": "Rockchip NPU (librknnrt) decoder path; librknnrt must be installed on the system",
+      "supports": "linux & arm64"
+    },
+    "server-audio-decode": {
+      "description": "audiocpp_server frontend: decode compressed uploads (miniaudio)",
+      "dependencies": [
+        {
+          "name": "audio-cpp",
+          "default-features": false,
+          "features": [
+            "tools"
+          ]
+        }
+      ]
+    },
+    "server-https": {
+      "description": "audiocpp_server frontend: HTTPS listener",
+      "dependencies": [
+        {
+          "name": "audio-cpp",
+          "default-features": false,
+          "features": [
+            "tools"
+          ]
+        },
+        "openssl"
+      ]
+    },
+    "server-mp3-encode": {
+      "description": "audiocpp_server frontend: MP3 responses (libmp3lame)",
+      "dependencies": [
+        {
+          "name": "audio-cpp",
+          "default-features": false,
+          "features": [
+            "tools"
+          ]
+        },
+        "mp3lame"
+      ]
+    },
+    "server-websocket": {
+      "description": "audiocpp_server frontend: WebSocket listener",
+      "dependencies": [
+        {
+          "name": "audio-cpp",
+          "default-features": false,
+          "features": [
+            "tools"
+          ]
+        },
+        "openssl"
+      ]
+    },
+    "sycl": {
+      "description": "Intel SYCL backend (requires oneAPI; the triplet must select icx/icpx)",
+      "supports": "(windows & x64) | linux"
+    },
+    "tools": {
+      "description": "Install audiocpp_cli, audiocpp_server and audiocpp_gguf"
+    },
+    "vulkan": {
+      "description": "Vulkan backend",
+      "dependencies": [
+        {
+          "name": "shaderc",
+          "host": true
+        },
+        "spirv-headers",
+        "vulkan"
+      ]
+    },
+    "webgpu": {
+      "description": "WebGPU backend (Dawn)",
+      "dependencies": [
+        "dawn"
+      ]
+    },
+    "zonos3-textnorm": {
+      "description": "Zyphra zyphra-textnorm text normalization for ZONOS3 (requires cargo/rustc; cargo downloads crates during the build; disabled in Windows Debug builds)",
+      "supports": "native"
+    }
+  }
+}

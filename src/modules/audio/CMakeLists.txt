@@ -39,6 +39,7 @@ target_sources(
     PRIVATE
       src/audio_system.cpp
       src/audio_stream.cpp
+      src/audio_transcriber.cpp
       src/pipeline/format_converter.cpp
       src/pipeline/drift_controller.cpp
       src/pipeline/device_output_sink.cpp
@@ -47,7 +48,7 @@ target_sources(
       src/pipeline/pipeline_stream.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common)
+target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common audiocpp::audiocpp)
 
 # speexdsp ships no CMake package config (pkg-config only).
 include(SelectLibraryConfigurations)

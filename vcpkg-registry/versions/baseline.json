@@ -19,6 +19,10 @@
     "cubeb": {
       "baseline": "1.0.0",
       "port-version": 0
+    },
+    "audio-cpp": {
+      "baseline": "0.9.5",
+      "port-version": 0
     }
   }
 }

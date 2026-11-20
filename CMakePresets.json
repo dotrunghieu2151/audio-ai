@@ -281,6 +281,7 @@
     {
       "name": "macos-test",
       "configurePreset": "macos",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       },
@@ -352,10 +353,6 @@
         {
           "type": "build",
           "name": "macos-debug"
-        },
-        {
-          "type": "test",
-          "name": "macos-test"
         }
       ]
     },

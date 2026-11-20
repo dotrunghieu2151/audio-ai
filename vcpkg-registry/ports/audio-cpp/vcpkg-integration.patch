@@ -1,0 +1,108 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 52ad094..51989f8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -153,10 +153,6 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/app/server/server_frontends.cmake")
+ option(AUDIOCPP_USE_SYSTEM_OPENSSL
+     "Use system OpenSSL for native model management instead of bundled BoringSSL"
+     OFF)
+-if (AUDIOCPP_USE_SYSTEM_OPENSSL AND NOT AUDIOCPP_BUILD_NATIVE_MODEL_MANAGER)
+-    message(FATAL_ERROR
+-        "AUDIOCPP_USE_SYSTEM_OPENSSL requires AUDIOCPP_BUILD_NATIVE_MODEL_MANAGER=ON")
+-endif()
+ option(ENGINE_ENABLE_CPU_ALL_VARIANTS
+     "Build CPU backends as dynamic libraries with per-ISA variants (for Docker/portable builds)"
+     OFF)
+@@ -5935,3 +5931,48 @@ if (ENGINE_BUILD_EXAMPLES)
+         target_link_libraries(model_spec_download_demo PRIVATE OpenMP::OpenMP_CXX)
+     endif()
+ endif()
++
++# ---------------------------------------------------------------------------
++# vcpkg install rules
++#
++# Everything audio.cpp ships goes to the "audiocpp" component. The vendored
++# ggml/sentencepiece keep their own install rules in the default component;
++# the port installs only this component so those never reach the package.
++# ---------------------------------------------------------------------------
++include(GNUInstallDirs)
++include(CMakePackageConfigHelpers)
++
++if (AUDIOCPP_BUILD_C_API)
++    install(TARGETS audiocpp EXPORT audiocpp-targets COMPONENT audiocpp
++        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
++    install(FILES include/audiocpp.h
++        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT audiocpp)
++    install(EXPORT audiocpp-targets NAMESPACE audiocpp::
++        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/audiocpp COMPONENT audiocpp)
++    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/audiocpp-config.cmake"
++        "include(\"\${CMAKE_CURRENT_LIST_DIR}/audiocpp-targets.cmake\")\n")
++    write_basic_package_version_file(
++        "${CMAKE_CURRENT_BINARY_DIR}/audiocpp-config-version.cmake"
++        VERSION ${AUDIOCPP_VERSION} COMPATIBILITY SameMinorVersion)
++    install(FILES
++        "${CMAKE_CURRENT_BINARY_DIR}/audiocpp-config.cmake"
++        "${CMAKE_CURRENT_BINARY_DIR}/audiocpp-config-version.cmake"
++        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/audiocpp COMPONENT audiocpp)
++endif()
++
++set(AUDIOCPP_INSTALL_TOOLS audiocpp_cli audiocpp_server audiocpp_gguf)
++if (AUDIOCPP_BUILD_NATIVE_MODEL_MANAGER)
++    list(APPEND AUDIOCPP_INSTALL_TOOLS audiocpp_model_manager)
++endif()
++install(TARGETS ${AUDIOCPP_INSTALL_TOOLS}
++    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT audiocpp)
++
++if (AUDIOCPP_STATIC_ESPEAK)
++    # Data stays a separate runtime file next to the binaries (see
++    # docs/espeak_phonemizer.md); the port relocates it with the tools.
++    install(FILES "${_espeak_package}"
++        DESTINATION ${CMAKE_INSTALL_DATADIR}/audiocpp COMPONENT audiocpp)
++endif()
+diff --git a/tools/cmake/espeak_static.cmake b/tools/cmake/espeak_static.cmake
+index 9cb4a9a..dc157c7 100644
+--- a/tools/cmake/espeak_static.cmake
++++ b/tools/cmake/espeak_static.cmake
+@@ -27,13 +27,29 @@ if(EMSCRIPTEN)
+         "-DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}"
+         "-DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}")
+ endif()
++if(MSVC)
++    # eSpeak always builds as Release; link it against the same CRT as the
++    # parent configuration so a Debug build does not mix /MD and /MDd.
++    list(APPEND _espeak_cross_args
++        -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
++        "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
++endif()
+ set(_espeak_root "${CMAKE_BINARY_DIR}/_deps/espeak-static")
+ set(_espeak_source "${_espeak_root}/source")
+ set(_espeak_build "${_espeak_root}/build")
+ set(_espeak_lib "${_espeak_build}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}espeak-ng${CMAKE_STATIC_LIBRARY_SUFFIX}")
+ set(_espeak_ucd "${_espeak_build}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}ucd${CMAKE_STATIC_LIBRARY_SUFFIX}")
++set(AUDIOCPP_ESPEAK_ARCHIVE "" CACHE FILEPATH
++    "Optional pre-fetched espeak-ng-1.52.0.tar.gz for offline/reproducible builds")
++if(AUDIOCPP_ESPEAK_ARCHIVE)
++    set(_espeak_url "${AUDIOCPP_ESPEAK_ARCHIVE}")
++    set(_espeak_archive "${AUDIOCPP_ESPEAK_ARCHIVE}")
++else()
++    set(_espeak_url https://codeload.github.com/espeak-ng/espeak-ng/tar.gz/refs/tags/1.52.0)
++    set(_espeak_archive "${_espeak_root}/download/espeak-ng-1.52.0.tar.gz")
++endif()
+ ExternalProject_Add(audiocpp_espeak_source
+-    URL https://codeload.github.com/espeak-ng/espeak-ng/tar.gz/refs/tags/1.52.0
++    URL "${_espeak_url}"
+     URL_HASH SHA256=bb4338102ff3b49a81423da8a1a158b420124b055b60fa76cfb4b18677130a23
+     DOWNLOAD_DIR "${_espeak_root}/download"
+     DOWNLOAD_NAME espeak-ng-1.52.0.tar.gz
+@@ -97,7 +113,7 @@ add_custom_target(audiocpp_espeak_stage
+     COMMAND ${CMAKE_COMMAND} -E make_directory "${_espeak_bin}/licenses/espeak-ng"
+     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_espeak_package}" "${_espeak_bin}/espeak-ng-data.bin"
+     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_espeak_source}/COPYING"
+-        "${_espeak_root}/download/espeak-ng-1.52.0.tar.gz"
++        "${_espeak_archive}"
+         "${PROJECT_SOURCE_DIR}/tools/cmake/espeak_patch.cmake"
+         "${PROJECT_SOURCE_DIR}/tools/cmake/espeak_static.cmake"
+         "${PROJECT_SOURCE_DIR}/docs/espeak_phonemizer.md"

@@ -20,8 +20,8 @@ namespace {
 
 // Recorded format. PipelineConfig converts the system audio to it, so the WAV header is known
 // before the stream opens.
-constexpr std::uint32_t wav_sample_rate = 48000;
-constexpr std::uint16_t wav_channels    = 2;
+constexpr std::uint32_t wav_sample_rate = 16000;
+constexpr std::uint16_t wav_channels    = 1;
 
 // Bridges the real-time callback (producer) and the file writer loop (consumer).
 struct WavRecorder
@@ -32,7 +32,8 @@ struct WavRecorder
 };
 
 // Real-time thread: no allocation, locks, IO or syscalls. Ring full => drop + count.
-dth::audio::CallbackResult record_callback(void* user_data, dth::audio::AudioBufferView buffer) noexcept
+dth::audio::CallbackResult record_callback(void*                       user_data,
+                                           dth::audio::AudioBufferView buffer) noexcept
 {
     auto&      recorder = *static_cast<WavRecorder*>(user_data);
     auto const samples  = buffer.samples();
@@ -44,15 +45,16 @@ dth::audio::CallbackResult record_callback(void* user_data, dth::audio::AudioBuf
 
 void put_u16(std::FILE* f, std::uint16_t v)
 {
-    std::array<unsigned char, 2> const b{static_cast<unsigned char>(v), static_cast<unsigned char>(v >> 8)};
+    std::array<unsigned char, 2> const b{static_cast<unsigned char>(v),
+                                         static_cast<unsigned char>(v >> 8)};
     std::fwrite(b.data(), 1, b.size(), f);
 }
 
 void put_u32(std::FILE* f, std::uint32_t v)
 {
-    std::array<unsigned char, 4> const b{static_cast<unsigned char>(v), static_cast<unsigned char>(v >> 8),
-                                         static_cast<unsigned char>(v >> 16),
-                                         static_cast<unsigned char>(v >> 24)};
+    std::array<unsigned char, 4> const b{
+        static_cast<unsigned char>(v), static_cast<unsigned char>(v >> 8),
+        static_cast<unsigned char>(v >> 16), static_cast<unsigned char>(v >> 24)};
     std::fwrite(b.data(), 1, b.size(), f);
 }
 
@@ -142,9 +144,9 @@ int main(int argc, char** argv)
     auto               stream = audioSystem.make_system_audio_stream(
         record_callback, &recorder,
         dth::audio::PipelineConfig{
-                          .processing = dth::audio::ProcessingFlags::resample |
-                                        dth::audio::ProcessingFlags::remap_channels,
-                          .target = {.sample_rate = wav_sample_rate, .channels = wav_channels},
+            .processing =
+                dth::audio::ProcessingFlags::resample | dth::audio::ProcessingFlags::remap_channels,
+            .target = {.sample_rate = wav_sample_rate, .channels = wav_channels},
         });
     // auto               stream = audioSystem.make_stream(
     //     inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
@@ -181,7 +183,8 @@ int main(int argc, char** argv)
 
     // WAV sizes are 32-bit: > 4 GiB (~3 h at 48 kHz stereo float) is truncated in the header.
     std::rewind(wav);
-    write_wav_header(wav, static_cast<std::uint32_t>(std::min<std::uint64_t>(data_bytes, UINT32_MAX - 36)));
+    write_wav_header(
+        wav, static_cast<std::uint32_t>(std::min<std::uint64_t>(data_bytes, UINT32_MAX - 36)));
     std::fclose(wav);
 
     spdlog::info("Wrote {} ({} bytes, {} overruns) in {} ms", wav_path, data_bytes,
