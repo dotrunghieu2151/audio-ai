@@ -13,6 +13,16 @@ add_executable(transcribe
 )
 
 target_link_libraries(transcribe PRIVATE fmt::fmt spdlog::spdlog Slint::Slint DTH::common DTH::audio)
+add_executable(transcribe-streaming
+    transcribe-streaming.cpp
+)
+
+target_link_libraries(transcribe-streaming PRIVATE fmt::fmt spdlog::spdlog Slint::Slint DTH::common DTH::audio)
+add_executable(transcribe-streaming-parakeet
+    transcribe-streaming-parakeet.cpp
+)
+
+target_link_libraries(transcribe-streaming-parakeet PRIVATE fmt::fmt spdlog::spdlog Slint::Slint DTH::common DTH::audio)
 if (DTH_ENABLE_SANITIZERS)
   target_link_libraries(${PROJECT_NAME} PUBLIC DTH::sanitizers)
 endif()

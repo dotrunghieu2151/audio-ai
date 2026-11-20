@@ -28,6 +28,7 @@ set(TESTS
     format_converter.test
     drift_controller.test
     pipeline_stream.test
+    speech_segmenter.test
 )
 
 foreach(t IN LISTS TESTS)

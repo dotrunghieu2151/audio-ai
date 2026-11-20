@@ -46,6 +46,8 @@ target_sources(
       src/pipeline/device_input_source.cpp
       src/pipeline/converting_sink.cpp
       src/pipeline/pipeline_stream.cpp
+      src/transcription/speech_segmenter.cpp
+      src/transcription/segment_transcribers.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common audiocpp::audiocpp)

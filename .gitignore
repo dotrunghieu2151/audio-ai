@@ -4,3 +4,4 @@ CMakeUserPresets.json
 .vcpkg
 .rustup
 .cargo
+.planning

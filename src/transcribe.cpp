@@ -1,60 +1,27 @@
 #include <algorithm>
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <csignal>
-#include <cstdint>
 #include <cstdio>
 #include <iostream>
 #include <thread>
 
 #include "dth/audio/audio_system.hpp"
 #include "dth/audio/audio_transcriber.hpp"
-#include "dth/audio/pipeline_config.hpp"
-#include "dth/audio/stream_config.hpp"
-#include "dth/common/spsc_ring_buffer.hpp"
 #include "dth/common/timer.hpp"
 #include "spdlog/spdlog.h"
 
 namespace {
 
-constexpr std::uint32_t wav_sample_rate = 16000;
-constexpr std::uint16_t wav_channels    = 1;
-struct TempBuffer
+// Transcriber worker thread: one call per utterance (offline_per_utterance has no partials), so
+// each utterance is shown on stdout as soon as it is transcribed.
+void on_transcript(void* user_data, const dth::audio::AudioTranscriber::TranscribedSegment& segment)
 {
-    // ~2 s of headroom for the writer loop.
-    dth::common::SpscRingBuffer<float> ring{std::size_t{wav_sample_rate} * wav_channels * 10};
-    std::atomic<std::uint64_t>         overruns{0};
-};
-
-// Real-time thread: no allocation, locks, IO or syscalls. Ring full => drop + count.
-dth::audio::CallbackResult record_callback(void*                       user_data,
-                                           dth::audio::AudioBufferView buffer) noexcept
-{
-    auto&      tempBuffer = *static_cast<TempBuffer*>(user_data);
-    auto const samples    = buffer.samples();
-    if (tempBuffer.ring.write(samples) < samples.size()) {
-        tempBuffer.overruns.fetch_add(1, std::memory_order_relaxed);
-    }
-    return dth::audio::CallbackResult::continue_stream;
-}
-
-// Drains the ring into the file (little-endian host assumed: macOS). Returns bytes written.
-void drain(TempBuffer& tempBuffer, dth::audio::AudioTranscriber& transcriber, std::FILE* f)
-{
-    std::array<float, std::size_t{wav_sample_rate} * wav_channels * 10> chunk{};
-    spdlog::info("ENTERING DRAIN TRANSCRIPTION");
-
-    tempBuffer.ring.read(chunk);
-    spdlog::info("TRANSCRIBING A SEGMENT {}", chunk.size());
-    const auto result = transcriber.transcribe(chunk, wav_sample_rate, 1, chunk.size());
-    if (!result.text.empty()) {
-        spdlog::info("TRANSCRIBING DONE, SAVING TO FILE {}", result.text.c_str());
-        std::fwrite(result.text.data(), sizeof(char), result.text.size(), f);
-        const char newline = '\n';
-        std::fwrite(&newline, sizeof(char), 1, f);
-        spdlog::info("WRITING TO ILE DONE");
-    }
+    auto* const file = static_cast<std::FILE*>(user_data);
+    spdlog::info("[{:.2f}s - {:.2f}s] {}", segment.start_sec, segment.end_sec, segment.text);
+    std::fprintf(file, "[%.2f - %.2f] %s\n", segment.start_sec, segment.end_sec,
+                 segment.text.c_str());
+    std::fflush(file);
 }
 
 }  // namespace
@@ -95,7 +62,6 @@ int main(int argc, char** argv)
     spdlog::info("Input device found: {}", inputDevice.value().name);
     spdlog::info("Output device found: {}", outputDevice.value().name);
 
-    TempBuffer        tempBuffer{};
     char const* const transcription_path = argc > 1 ? argv[1] : "transcription.txt";
 
     dth::common::Timer timer{};
@@ -113,16 +79,23 @@ int main(int argc, char** argv)
         .backend    = dth::audio::AudioTranscriber::Config::Backend::Metal,
         .device     = 0,
         .threads    = 8,
+        // Each VAD utterance is transcribed offline on its own.
+        .stream_strategy =
+            dth::audio::AudioTranscriber::Config::StreamStrategy::offline_per_utterance,
+        // Utterances end at phrase pauses (300 ms) rather than sentence pauses, for more frequent
+        // results. max_utterance_sec stays 20: each forced cut in pause-free speech can lose words
+        // at the cut with parakeet, so a lower cap trades accuracy for latency.
+        .vad_min_silence_ms = 300,
+        // Long utterances end at ever shorter pauses (~300 ms after 5 s, ~200 ms after 10 s)
+        // before the 20 s cap forces a cut.
+        .vad_adaptive_silence = {{.after_sec = 5.0, .min_silence_ms = 150},
+                                 {.after_sec = 10.0, .min_silence_ms = 50}},
     });
     spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
     timer.start();
-    auto stream = audioSystem.make_system_audio_stream(
-        record_callback, &tempBuffer,
-        dth::audio::PipelineConfig{
-            .processing =
-                dth::audio::ProcessingFlags::resample | dth::audio::ProcessingFlags::remap_channels,
-            .target = {.sample_rate = wav_sample_rate, .channels = wav_channels},
-        });
+    // Converts to the model's mono 16 kHz itself.
+    auto stream = asr.make_stream(audioSystem, audioSystem.make_system_audio_source(),
+                                  on_transcript, transcriptionFile);
     // auto               stream = audioSystem.make_stream(
     //     inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
     //     [](void*, dth::audio::DuplexAudioBufferView buffer) noexcept {
@@ -149,16 +122,18 @@ int main(int argc, char** argv)
         return 1;
     }
     spdlog::info("Stream started. Recording..");
+    // Transcription runs on the stream's worker thread; this thread only waits for shutdown.
     while (keep_running && stream.is_running()) {
-        drain(tempBuffer, asr, transcriptionFile);
-
-        spdlog::info("Transcribed done for segment. Sleeping");
-        std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    (void)stream.stop();  // no callback after this returns
-    drain(tempBuffer, asr, transcriptionFile);
+    // Flushes the tail and delivers the last utterance; no callback after this returns.
+    result = stream.stop();
     std::fclose(transcriptionFile);
+    if (!result.has_value()) {
+        spdlog::info("Stream stop error {}", result.error().message);
+        return 1;
+    }
 
-    spdlog::info("{} overruns in {} s", tempBuffer.overruns.load(), timer.stop_ms() / 1e6);
+    spdlog::info("Recorded for {} s", timer.stop_ms() / 1e6);
     return 0;
 }
