@@ -102,20 +102,22 @@ int main(int argc, char** argv)
         .backend    = dth::audio::AudioTranscriber::Config::Backend::Metal,
         .device     = 0,
         .threads    = 8,
+    });
+    spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
+    timer.start();
+    const dth::audio::AudioTranscriber::StreamConfig stream_config{
         // Cache-aware: one streaming session for the whole recording keeps its context; VAD
         // utterances only group its text.
-        .stream_strategy = dth::audio::AudioTranscriber::Config::StreamStrategy::continuous_stream,
+        .strategy = dth::audio::AudioTranscriber::StreamConfig::Strategy::continuous_stream,
         // Text arrives as partials anyway; utterances only bound the lines. The stream keeps its
         // context, so shorter utterances cost no accuracy.
         .max_utterance_sec = 10.0,
         // Output lag: 320 ms chunk plus the default 3 x 80 ms lookahead.
-        .stream_text_latency_sec = 0.6,
-    });
-    spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
-    timer.start();
+        .text_latency_sec = 0.6,
+    };
     // Converts to the model's mono 16 kHz itself.
     auto stream = asr.make_stream(audioSystem, audioSystem.make_system_audio_source(),
-                                  on_transcript, &writer);
+                                  stream_config, on_transcript, &writer);
     // auto               stream = audioSystem.make_stream(
     //     inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
     //     [](void*, dth::audio::DuplexAudioBufferView buffer) noexcept {

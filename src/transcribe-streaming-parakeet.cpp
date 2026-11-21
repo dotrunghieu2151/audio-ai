@@ -112,21 +112,24 @@ int main(int argc, char** argv)
         // accuracy; otherwise transcribe.cpp (parakeet offline) or nemotron (transcribe-streaming).
         .session_options =
             {
+                {"parakeet_tdt.offline_mode", "auto"},
                 {"parakeet_tdt.audio_chunk_duration_sec", "2"},  // center, decoded once
                 {"parakeet_tdt.right_context_sec", "2"},         // lookahead
                 {"parakeet_tdt.left_context_sec", "5"},  // 10 (default) re-reads stale audio
             },
-        .stream_strategy = dth::audio::AudioTranscriber::Config::StreamStrategy::continuous_stream,
-        // Utterances only bound the lines: the stream keeps its own windows.
-        .max_utterance_sec = 10.0,
-        // Output lag: text appears once center + right context (4 s) has been heard.
-        .stream_text_latency_sec = 4.5,
     });
     spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
     timer.start();
+    const dth::audio::AudioTranscriber::StreamConfig stream_config{
+        .strategy = dth::audio::AudioTranscriber::StreamConfig::Strategy::continuous_stream,
+        // Utterances only bound the lines: the stream keeps its own windows.
+        .max_utterance_sec = 10.0,
+        // Output lag: text appears once center + right context (4 s) has been heard.
+        .text_latency_sec = 4.5,
+    };
     // Converts to the model's mono 16 kHz itself.
     auto stream = asr.make_stream(audioSystem, audioSystem.make_system_audio_source(),
-                                  on_transcript, &writer);
+                                  stream_config, on_transcript, &writer);
     // auto               stream = audioSystem.make_stream(
     //     inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
     //     [](void*, dth::audio::DuplexAudioBufferView buffer) noexcept {

@@ -48,6 +48,7 @@ struct HandleDeleter
     }
 };
 
+using RegistryPtr = std::unique_ptr<audiocpp_registry, HandleDeleter<&audiocpp_registry_free>>;
 using ModelPtr   = std::unique_ptr<audiocpp_model, HandleDeleter<&audiocpp_model_free>>;
 using SessionPtr = std::unique_ptr<audiocpp_session, HandleDeleter<&audiocpp_session_free>>;
 using OptionsPtr = std::unique_ptr<audiocpp_options, HandleDeleter<&audiocpp_options_free>>;
@@ -96,14 +97,40 @@ inline void set_request_options(audiocpp_request* request, const OptionMap& valu
     }
 }
 
+inline RequestPtr make_request()
+{
+    RequestPtr request{audiocpp_request_create()};
+    if (!request) {
+        throw std::runtime_error("Failed to create audio.cpp request");
+    }
+    return request;
+}
+
+// Loads the model at `path` as `family` (e.g. "silero_vad").
+inline ModelPtr load_model(audiocpp_registry* registry, const std::string& path,
+                           const std::string& family)
+{
+    const audiocpp_model_config config{family.c_str(), nullptr, nullptr, nullptr};
+    audiocpp_model*             model = nullptr;
+    check_status(audiocpp_model_load(registry, path.c_str(), &config, nullptr, &model));
+    return ModelPtr{model};
+}
+
+// `backend_config` and `options` may be NULL. The session keeps its model alive.
+inline SessionPtr create_session(const audiocpp_model* model, const char* task, const char* mode,
+                                 const audiocpp_backend_config* backend_config,
+                                 const audiocpp_options*        options)
+{
+    audiocpp_session* session = nullptr;
+    check_status(audiocpp_session_create(model, task, mode, backend_config, options, &session));
+    return SessionPtr{session};
+}
+
 // Starts (or restarts) a stream on a "streaming" session for mono 16 kHz input. Families prepare
 // from the request's audio format, so the request carries one silent sample; it is never processed.
 inline void start_stream(audiocpp_session* session, const OptionMap& request_options = {})
 {
-    const RequestPtr request{audiocpp_request_create()};
-    if (!request) {
-        throw std::runtime_error("Failed to create audio.cpp request");
-    }
+    const RequestPtr request = make_request();
     const float silence = 0.0F;
     check_status(audiocpp_request_set_audio(request.get(), &silence, 1, sample_rate, channels));
     set_request_options(request.get(), request_options);

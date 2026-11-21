@@ -79,9 +79,12 @@ int main(int argc, char** argv)
         .backend    = dth::audio::AudioTranscriber::Config::Backend::Metal,
         .device     = 0,
         .threads    = 8,
+    });
+    spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
+    timer.start();
+    const dth::audio::AudioTranscriber::StreamConfig stream_config{
         // Each VAD utterance is transcribed offline on its own.
-        .stream_strategy =
-            dth::audio::AudioTranscriber::Config::StreamStrategy::offline_per_utterance,
+        .strategy = dth::audio::AudioTranscriber::StreamConfig::Strategy::offline_per_utterance,
         // Utterances end at phrase pauses (300 ms) rather than sentence pauses, for more frequent
         // results. max_utterance_sec stays 20: each forced cut in pause-free speech can lose words
         // at the cut with parakeet, so a lower cap trades accuracy for latency.
@@ -90,12 +93,10 @@ int main(int argc, char** argv)
         // before the 20 s cap forces a cut.
         .vad_adaptive_silence = {{.after_sec = 5.0, .min_silence_ms = 150},
                                  {.after_sec = 10.0, .min_silence_ms = 50}},
-    });
-    spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
-    timer.start();
+    };
     // Converts to the model's mono 16 kHz itself.
     auto stream = asr.make_stream(audioSystem, audioSystem.make_system_audio_source(),
-                                  on_transcript, transcriptionFile);
+                                  stream_config, on_transcript, transcriptionFile);
     // auto               stream = audioSystem.make_stream(
     //     inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
     //     [](void*, dth::audio::DuplexAudioBufferView buffer) noexcept {

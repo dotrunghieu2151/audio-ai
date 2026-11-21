@@ -5,6 +5,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "dth/audio/audio_stream.hpp"
@@ -30,22 +31,43 @@ class AudioTranscriber
         int     device  = 0;
         int     threads = 4;
 
-        // audio.cpp model options, passed through verbatim: keys as the model family declares
-        // them (audio.cpp docs/models/<family>.md), e.g. "parakeet_tdt.right_context_sec" -> "1".
-        // Unknown keys or invalid values fail where the options are applied: session options
-        // in the constructor / make_stream(), request options in transcribe() / a stream's start().
-        // - session_options (audiocpp --session-option): every ASR session of this transcriber,
-        //   transcribe()'s and make_stream()'s; they override transcribe()'s built-in defaults.
-        // - request_options (audiocpp --request-option): every transcribe() request, every
-        //   offline_per_utterance utterance and every continuous_stream stream start.
+        // audio.cpp session options (audiocpp --session-option), passed through verbatim: keys as
+        // the model family declares them (audio.cpp docs/models/<family>.md), e.g.
+        // "parakeet_tdt.right_context_sec" -> "1". They go on every ASR session of this
+        // transcriber, transcribe()'s and make_stream()'s. Unknown keys or invalid values fail
+        // where a session is created: in the constructor or make_stream().
         std::map<std::string, std::string> session_options;
-        std::map<std::string, std::string> request_options;
 
-        // How make_stream() turns the utterances voice activity detection finds into text.
-        // audio.cpp cannot tell which a model needs: its streaming mode may be buffered (fixed
-        // windows re-encoded, no context carried: parakeet_tdt, haas_asr) or cache-aware (context
-        // carried across the whole stream).
-        enum class StreamStrategy {
+        // transcribe() only: VAD model directory the ASR model splits long input with (session
+        // option "<model>.vad_model_path", request option audio_chunk_mode=vad). Only families
+        // with VAD chunking accept it (e.g. parakeet_tdt, qwen3_asr, gigaam_asr). Empty: the
+        // family's default chunking. session_options / request options with the same keys win.
+        // audio_chunk_mode=vad is only added when this is set, not for a vad_model_path given
+        // through session_options.
+        std::string vad_model_path;
+
+        [[nodiscard]] constexpr std::string_view backend_str() const
+        {
+            switch (backend) {
+                case Config::Backend::Cuda:
+                    return "cuda";
+                case Config::Backend::Metal:
+                    return "metal";
+                case Config::Backend::NativeCpu:
+                    return "cpu";
+            }
+            return "UNKNOWN";
+        }
+    };
+
+    // Per-stream settings of make_stream().
+    struct StreamConfig
+    {
+        // How utterances that voice activity detection finds are turned into text. audio.cpp
+        // cannot tell which a model needs: its streaming mode may be buffered (fixed windows
+        // re-encoded, no context carried: parakeet_tdt, haas_asr) or cache-aware (context carried
+        // across the whole stream).
+        enum class Strategy {
             // Each utterance is transcribed on its own, offline, with full context inside it.
             // Best for models whose streaming mode is buffered.
             offline_per_utterance,
@@ -53,14 +75,14 @@ class AudioTranscriber
             // utterances; utterance boundaries only group its text. For cache-aware models.
             continuous_stream,
         };
-        StreamStrategy stream_strategy = StreamStrategy::offline_per_utterance;
+        Strategy strategy = Strategy::offline_per_utterance;
 
-        // Silero VAD model directory, used by make_stream() to find utterances.
+        // Silero VAD model directory used to find utterances.
         std::string vad_model_path = "assets/models/silero_vad";
 
-        // make_stream() utterance segmentation. Shorter utterances give final results sooner;
-        // with offline_per_utterance they also give the model less context (fewer than ~3-5 s
-        // costs accuracy). With continuous_stream they only change how text is grouped.
+        // Utterance segmentation. Shorter utterances give final results sooner; with
+        // offline_per_utterance they also give the model less context (fewer than ~3-5 s costs
+        // accuracy). With continuous_stream they only change how text is grouped.
         // Continuous speech is cut after this long, at a pause found in its second half when
         // there is one. Range [2, 60].
         double max_utterance_sec = 20.0;
@@ -92,20 +114,12 @@ class AudioTranscriber
         // is still pushed so the model emits the last words; longer silence is skipped. Too small:
         // an utterance's last words are lost to the next one or delayed until the next speech.
         // Default: nemotron_asr (320 ms chunk + 240 ms lookahead).
-        double stream_text_latency_sec = 0.6;
+        double text_latency_sec = 0.6;
 
-        constexpr std::string_view backend_str()
-        {
-            switch (backend) {
-                case Config::Backend::Cuda:
-                    return "cuda";
-                case Config::Backend::Metal:
-                    return "metal";
-                case Config::Backend::NativeCpu:
-                    return "cpu";
-            }
-            return "UNKNOWN";
-        }
+        // audio.cpp request options (audiocpp --request-option), passed through verbatim: on every
+        // offline_per_utterance utterance, on the continuous_stream stream start. Invalid ones
+        // fail the stream's start().
+        std::map<std::string, std::string> request_options;
     };
 
     struct TranscribeResult
@@ -128,16 +142,20 @@ class AudioTranscriber
     // sample_rate: input sample rate
     // channels: number of channels
     //
-    // Returns an empty string if no text was produced.
+    // request_options: audio.cpp request options (audiocpp --request-option) for this call, passed
+    // through verbatim; they override the audio_chunk_mode Config::vad_model_path sets.
+    //
+    // Returns empty text and language if no text was produced.
     TranscribeResult transcribe(std::span<const float> samples, int sample_rate, int channels,
-                                int frames);
+                                int frames,
+                                const std::map<std::string, std::string>& request_options = {});
 
     // Text of a stream. Times are seconds since the stream's start().
     // - is_final true: one whole utterance; [start_sec, end_sec] is its span.
     // - is_final false (continuous_stream only): new text as soon as the model emits it, part of
     //   the utterance the next final call delivers whole. Concatenating the partials of an
     //   utterance gives its text; [start_sec, end_sec] runs from the utterance's start to the
-    //   moment the text was emitted (the model lags the audio by stream_text_latency_sec).
+    //   moment the text was emitted (the model lags the audio by StreamConfig::text_latency_sec).
     struct TranscribedSegment
     {
         std::string text;
@@ -157,8 +175,8 @@ class AudioTranscriber
     // Streams `source` through this transcriber's model, one final callback per utterance (plus
     // partials with continuous_stream). The audio is
     // converted to mono 16 kHz on the source's real-time thread; a worker thread running between
-    // the stream's start() and stop() finds utterances with Silero VAD (Config::vad_model_path;
-    // see Config::max_utterance_sec / vad_*) and transcribes them per Config::stream_strategy.
+    // the stream's start() and stop() finds utterances with Silero VAD (StreamConfig::vad_model_path;
+    // see StreamConfig::max_utterance_sec / vad_*) and transcribes them per StreamConfig::strategy.
     // stop() returns after the last callback, so it blocks while the worker transcribes its
     // backlog (up to 30 s of audio when it lags). Worker failures end the stream at the next audio
     // buffer (is_running() false) and are returned by stop(), as is audio dropped because the
@@ -166,11 +184,12 @@ class AudioTranscriber
     //
     // The stream owns its own audio.cpp sessions: it may outlive this transcriber and run alongside
     // transcribe(). Call make_stream() and transcribe() from one thread.
-    // Throws if the model does not support the strategy's ASR mode, the VAD model cannot be
-    // loaded, or a session cannot be created.
+    // Throws std::invalid_argument if `config` is out of range, std::runtime_error if the model
+    // does not support the strategy's ASR mode, the VAD model cannot be loaded, or a session
+    // cannot be created.
     [[nodiscard]]
     AudioStream make_stream(AudioSystem& system, std::unique_ptr<AudioSource> source,
-                            StreamCallback callback, void* user_data);
+                            const StreamConfig& config, StreamCallback callback, void* user_data);
 
   private:
     class Impl;

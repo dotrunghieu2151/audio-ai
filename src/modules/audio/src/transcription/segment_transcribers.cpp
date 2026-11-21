@@ -89,11 +89,8 @@ void VoiceActivityDetector::report(const audiocpp::EventPtr& event,
 // ---- SileroPauseFinder ----
 
 SileroPauseFinder::SileroPauseFinder(audiocpp::SessionPtr session)
-    : session_{std::move(session)}, request_{audiocpp_request_create()}
+    : session_{std::move(session)}, request_{audiocpp::make_request()}
 {
-    if (!request_) {
-        throw std::runtime_error("Failed to create audio.cpp request");
-    }
 }
 
 std::optional<std::int64_t> SileroPauseFinder::find_pause(std::span<const float> samples)
@@ -141,13 +138,10 @@ OfflineSegmentTranscriber::OfflineSegmentTranscriber(audiocpp::SessionPtr       
                                                      AudioTranscriber::StreamCallback callback,
                                                      void*                            user_data)
     : session_{std::move(session)},
-      request_{audiocpp_request_create()},
+      request_{audiocpp::make_request()},
       callback_{callback},
       user_data_{user_data}
 {
-    if (!request_) {
-        throw std::runtime_error("Failed to create audio.cpp request");
-    }
     // Kept by the request across utterances; only the audio changes.
     audiocpp::set_request_options(request_.get(), request_options);
 }

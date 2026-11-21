@@ -75,7 +75,7 @@ class SegmentTranscriber : public SegmentSink
     virtual void finish() = 0;
 };
 
-// Config::StreamStrategy::offline_per_utterance: each utterance is one request on an "offline"
+// StreamConfig::Strategy::offline_per_utterance: each utterance is one request on an "offline"
 // session.
 class OfflineSegmentTranscriber final : public SegmentTranscriber
 {
@@ -99,7 +99,7 @@ class OfflineSegmentTranscriber final : public SegmentTranscriber
     void*                            user_data_;
 };
 
-// Config::StreamStrategy::continuous_stream: one "streaming" session, finished only by finish(), so
+// StreamConfig::Strategy::continuous_stream: one "streaming" session, finished only by finish(), so
 // its context spans the whole stream; audio goes in the family's preferred chunk size.
 //
 // Only speech is pushed: the model hears each utterance from its (padded) start, plus

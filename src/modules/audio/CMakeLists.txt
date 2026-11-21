@@ -48,6 +48,7 @@ target_sources(
       src/pipeline/pipeline_stream.cpp
       src/transcription/speech_segmenter.cpp
       src/transcription/segment_transcribers.cpp
+      src/transcription/transcriber_sink.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common audiocpp::audiocpp)
