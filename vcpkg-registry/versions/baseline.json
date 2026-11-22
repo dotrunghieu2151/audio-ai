@@ -23,6 +23,18 @@
     "audio-cpp": {
       "baseline": "0.9.5",
       "port-version": 0
+    },
+    "llama-cpp": {
+      "baseline": "1.0.0",
+      "port-version": 0
+    },
+    "ggml": {
+      "baseline": "1.0.0",
+      "port-version": 0
+    },
+    "onnxruntime": {
+      "baseline": "1.32.0",
+      "port-version": 0
     }
   }
 }

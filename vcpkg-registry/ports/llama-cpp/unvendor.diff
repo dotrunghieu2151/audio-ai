@@ -1,0 +1,112 @@
+diff --git a/common/http.h b/common/http.h
+index d8cfde2..06a58f7 100644
+--- a/common/http.h
++++ b/common/http.h
+@@ -2,7 +2,7 @@
+ 
+ #include "log.h"
+ 
+-#include <cpp-httplib/httplib.h>
++#include <httplib.h>
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
+diff --git a/tools/CMakeLists.txt b/tools/CMakeLists.txt
+index 6a6592c..788f0e6 100644
+--- a/tools/CMakeLists.txt
++++ b/tools/CMakeLists.txt
+@@ -41,7 +41,7 @@ else()
+         add_subdirectory(export-lora)
+     endif()
+     add_subdirectory(fit-params)
+-    if (GGML_METAL)
++    if (GGML_METAL AND NOT LLAMA_USE_SYSTEM_GGML)
+         add_subdirectory(tuning)
+     endif()
+     add_subdirectory(results)
+diff --git a/tools/mtmd/mtmd-helper.cpp b/tools/mtmd/mtmd-helper.cpp
+index aefe504..860c964 100644
+--- a/tools/mtmd/mtmd-helper.cpp
++++ b/tools/mtmd/mtmd-helper.cpp
+@@ -32,10 +32,10 @@
+ #define MA_NO_ENGINE
+ #define MA_NO_GENERATION
+ #define MA_API static
+-#include "miniaudio/miniaudio.h"
++#include "miniaudio.h"
+ 
+ #define STB_IMAGE_IMPLEMENTATION
+-#include "stb/stb_image.h"
++#include "stb_image.h"
+ 
+ #ifdef MTMD_INTERNAL_HEADER
+ #error "mtmd-helper is a public library outside of mtmd. it must not include internal headers"
+diff --git a/tools/server/server-common.cpp b/tools/server/server-common.cpp
+index 0013c09..96c401b 100644
+--- a/tools/server/server-common.cpp
++++ b/tools/server/server-common.cpp
+@@ -9,7 +9,7 @@
+ 
+ #include "server-common.h"
+ 
+-#include <cpp-httplib/httplib.h>
++#include <httplib.h>
+ 
+ #include <algorithm>
+ #include <cmath>
+diff --git a/tools/server/server-http.cpp b/tools/server/server-http.cpp
+index 5bdece5..1da0801 100644
+--- a/tools/server/server-http.cpp
++++ b/tools/server/server-http.cpp
+@@ -4,7 +4,7 @@
+ #include "server-common.h"
+ #include "ui.h"
+ 
+-#include <cpp-httplib/httplib.h>
++#include <httplib.h>
+ 
+ #include <algorithm>
+ #include <cctype>
+diff --git a/tools/server/server-models.cpp b/tools/server/server-models.cpp
+index 5b7d345..f57283a 100644
+--- a/tools/server/server-models.cpp
++++ b/tools/server/server-models.cpp
+@@ -12,7 +12,7 @@
+ #include "http.h"
+ #include "subproc.h"
+ 
+-#include <cpp-httplib/httplib.h> // TODO: remove this once we use HTTP client from download.h
++#include <httplib.h> // TODO: remove this once we use HTTP client from download.h
+ #include <optional>
+ 
+ #include <functional>
+diff --git a/vendor/CMakeLists.txt b/vendor/CMakeLists.txt
+index 4479daf..7ca6aa5 100644
+--- a/vendor/CMakeLists.txt
++++ b/vendor/CMakeLists.txt
+@@ -1,11 +1,21 @@
+ # mtmd needs these even when common is not built
+ add_subdirectory(hash)
+-add_subdirectory(miniaudio)
+-add_subdirectory(nlohmann)
++if (LLAMA_BUILD_TOOLS OR LLAMA_BUILD_MTMD)
++    find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h REQUIRED)
++    add_library(miniaudio INTERFACE)
++    add_library(vendor::miniaudio ALIAS miniaudio)
++    target_include_directories(miniaudio INTERFACE "${MINIAUDIO_INCLUDE_DIR}")
++    find_path(STB_INCLUDE_DIR stb_image.h REQUIRED)
++    add_library(stb INTERFACE)
++    add_library(vendor::stb ALIAS stb)
++    target_include_directories(stb INTERFACE "${STB_INCLUDE_DIR}")
++endif()
++find_package(nlohmann_json CONFIG REQUIRED GLOBAL)
++add_library(vendor::nlohmann ALIAS nlohmann_json::nlohmann_json)
+ add_subdirectory(sheredom)
+-add_subdirectory(stb)
+ 
+ # only used by common
+ if (LLAMA_BUILD_COMMON)
+-    add_subdirectory(cpp-httplib)
++    find_package(httplib CONFIG REQUIRED GLOBAL)
++    add_library(cpp-httplib ALIAS httplib::httplib)
+ endif()

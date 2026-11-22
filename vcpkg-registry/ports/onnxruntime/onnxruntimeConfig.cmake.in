@@ -1,0 +1,30 @@
+# onnxruntime::onnxruntime: the prebuilt shared library from the NuGet package.
+if(TARGET onnxruntime::onnxruntime)
+    return()
+endif()
+
+get_filename_component(_onnxruntime_prefix "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+
+add_library(onnxruntime::onnxruntime SHARED IMPORTED)
+set_target_properties(onnxruntime::onnxruntime PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${_onnxruntime_prefix}/include/onnxruntime")
+
+if(WIN32)
+    set_target_properties(onnxruntime::onnxruntime PROPERTIES
+        IMPORTED_IMPLIB_RELEASE "${_onnxruntime_prefix}/lib/onnxruntime.lib"
+        IMPORTED_LOCATION_RELEASE "${_onnxruntime_prefix}/bin/onnxruntime.dll"
+        IMPORTED_IMPLIB_DEBUG "${_onnxruntime_prefix}/debug/lib/onnxruntime.lib"
+        IMPORTED_LOCATION_DEBUG "${_onnxruntime_prefix}/debug/bin/onnxruntime.dll")
+else()
+    set_target_properties(onnxruntime::onnxruntime PROPERTIES
+        IMPORTED_LOCATION_RELEASE "${_onnxruntime_prefix}/lib/@runtime_name@"
+        IMPORTED_LOCATION_DEBUG "${_onnxruntime_prefix}/debug/lib/@runtime_name@"
+        IMPORTED_SONAME_RELEASE "@runtime_name@"
+        IMPORTED_SONAME_DEBUG "@runtime_name@")
+endif()
+set_property(TARGET onnxruntime::onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE DEBUG)
+set_target_properties(onnxruntime::onnxruntime PROPERTIES
+    MAP_IMPORTED_CONFIG_MINSIZEREL RELEASE
+    MAP_IMPORTED_CONFIG_RELWITHDEBINFO RELEASE)
+
+unset(_onnxruntime_prefix)

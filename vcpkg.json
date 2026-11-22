@@ -10,6 +10,11 @@
     { "name": "slint", "version>=": "1.18.1#0", "features": ["live-preview"] },
     { "name": "cubeb", "version>=": "1.0.0#0", "features": ["use-rust-libs"] },
     { "name": "speexdsp", "version>=": "1.2.1#1" },
-    { "name": "audio-cpp", "version>=": "0.9.5#0", "features": ["metal"] }
+    { "name": "audio-cpp", "version>=": "0.9.5#0", "features": ["metal"] },
+    { "name": "ggml", "version>=": "1.0.0#0", "features": ["metal"] },
+    { "name": "llama-cpp", "version>=": "1.0.0#0" },
+    { "name": "onnxruntime", "version>=": "1.32.0#0" },
+    { "name": "sentencepiece", "version>=": "0.2.1#0" },
+    { "name": "protobuf", "version>=": "6.33.4#2" }
   ]
 }

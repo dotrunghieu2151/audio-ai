@@ -1,0 +1,8 @@
+{
+  "name": "onnxruntime",
+  "version-semver": "1.32.0",
+  "description": "ONNX Runtime (CPU), prebuilt from the official NuGet package Microsoft.ML.OnnxRuntime.",
+  "homepage": "https://onnxruntime.ai",
+  "license": "MIT",
+  "supports": "(osx & arm64) | (linux & (x64 | arm64)) | (windows & (x64 | arm64) & !uwp)"
+}
