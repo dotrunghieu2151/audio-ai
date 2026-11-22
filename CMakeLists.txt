@@ -23,6 +23,9 @@ find_package(portaudio CONFIG REQUIRED)
 find_package(Slint CONFIG REQUIRED)
 find_package(cubeb CONFIG REQUIRED)
 find_package(audiocpp CONFIG REQUIRED)
+find_package(llama CONFIG REQUIRED)
+find_package(onnxruntime CONFIG REQUIRED)
+find_package(protobuf CONFIG REQUIRED)  # sentencepiece (pkg-config only) needs protobuf-lite
 
 get_target_property(slint_enabled_features Slint::Slint SLINT_ENABLED_FEATURES)
 message(STATUS "Slint enabled features: ${slint_enabled_features}")

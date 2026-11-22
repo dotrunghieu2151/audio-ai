@@ -8,45 +8,10 @@
 
 #include "dth/audio/audio_system.hpp"
 #include "dth/audio/audio_transcriber.hpp"
+#include "dth/audio/audio_translator.hpp"
 #include "dth/common/timer.hpp"
+#include "live_translation.hpp"
 #include "spdlog/spdlog.h"
-
-namespace {
-
-struct TranscriptWriter
-{
-    std::FILE* file      = nullptr;
-    bool       line_open = false;  // an utterance's partials are being written
-};
-
-// Transcriber worker thread. Partials are written as they arrive, one line per utterance; the
-// final call repeats the utterance's whole text, so it only ends the line.
-void on_transcript(void* user_data, const dth::audio::AudioTranscriber::TranscribedSegment& segment)
-{
-    auto& writer = *static_cast<TranscriptWriter*>(user_data);
-    if (segment.is_final) {
-        spdlog::info("[{:.2f}s - {:.2f}s] {}", segment.start_sec, segment.end_sec, segment.text);
-        if (writer.line_open) {
-            std::fputc('\n', writer.file);
-            writer.line_open = false;
-        }
-        else {
-            std::fprintf(writer.file, "[%.2f] %s\n", segment.start_sec, segment.text.c_str());
-        }
-    }
-    else {
-        if (!writer.line_open) {
-            std::fprintf(writer.file, "[%.2f] ", segment.start_sec);
-            writer.line_open = true;
-        }
-        std::fputs(segment.text.c_str(), writer.file);
-        std::fputs(segment.text.c_str(), stdout);
-        std::fflush(stdout);
-    }
-    std::fflush(writer.file);
-}
-
-}  // namespace
 
 // Use a volatile atomic flag for async-signal safety
 std::atomic<bool> keep_running{true};
@@ -62,6 +27,12 @@ void signalHandler(int signal)
 
 int main(int argc, char** argv)
 {
+    const auto options = demo::parse_options(argc, argv);
+    if (!options) {
+        demo::print_usage(argv[0]);
+        return 1;
+    }
+
     dth::audio::AudioSystem audioSystem{};
     auto                    inputDevice{audioSystem.default_input_device()};
     auto                    outputDevice{audioSystem.default_output_device()};
@@ -84,16 +55,13 @@ int main(int argc, char** argv)
     spdlog::info("Input device found: {}", inputDevice.value().name);
     spdlog::info("Output device found: {}", outputDevice.value().name);
 
-    char const* const transcription_path = argc > 1 ? argv[1] : "transcription.txt";
-
-    dth::common::Timer timer{};
-
-    std::FILE* transcriptionFile = std::fopen(transcription_path, "a");
-    if (transcriptionFile == nullptr) {
-        spdlog::info("Cannot open {}", transcription_path);
+    const demo::FilePtr transcription_file = demo::open_append(options->transcription_path);
+    const demo::FilePtr translation_file   = demo::open_append(options->translation_path);
+    if (!transcription_file || !translation_file) {
         return 1;
     }
-    TranscriptWriter writer{.file = transcriptionFile};
+
+    dth::common::Timer timer{};
 
     spdlog::info("Loading model");
     dth::audio::AudioTranscriber asr({
@@ -119,6 +87,18 @@ int main(int argc, char** argv)
             },
     });
     spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
+
+    timer.start();
+    dth::audio::AudioTranslator translator({.model_path = options->translator_model});
+    spdlog::info("Translator loaded. Took {} s", timer.stop_ms() / 1e6);
+
+    // Declared before the streams that call into it, so it outlives them.
+    demo::LiveTranslation output{transcription_file.get(), translation_file.get(),
+                                 options->languages.target};
+    // Units are translated as soon as their sentence is complete, also mid-utterance.
+    auto translation = translator.make_stream({.languages = options->languages},
+                                              &demo::LiveTranslation::on_translation, &output);
+    output.translate_into(translation);
     timer.start();
     const dth::audio::AudioTranscriber::StreamConfig stream_config{
         .strategy = dth::audio::AudioTranscriber::StreamConfig::Strategy::continuous_stream,
@@ -126,10 +106,14 @@ int main(int argc, char** argv)
         .max_utterance_sec = 10.0,
         // Output lag: text appears once center + right context (4 s) has been heard.
         .text_latency_sec = 4.5,
+        // --diarize: speaker turns keep each translation unit to one speaker.
+        .diarization_model_path = options->diarization_model,
+        .speaker_callback       = &demo::LiveTranslation::on_speakers,
     };
     // Converts to the model's mono 16 kHz itself.
     auto stream = asr.make_stream(audioSystem, audioSystem.make_system_audio_source(),
-                                  stream_config, on_transcript, &writer);
+                                  stream_config, &demo::LiveTranslation::on_transcript,
+                                  &output);
     // auto               stream = audioSystem.make_stream(
     //     inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
     //     [](void*, dth::audio::DuplexAudioBufferView buffer) noexcept {
@@ -162,9 +146,15 @@ int main(int argc, char** argv)
     }
     // Flushes the tail and delivers the last utterance; no callback after this returns.
     result = stream.stop();
-    std::fclose(transcriptionFile);
     if (!result.has_value()) {
         spdlog::info("Stream stop error {}", result.error().message);
+    }
+    // Then the translations of the last utterances.
+    const auto translated = translation.stop();
+    if (!translated.has_value()) {
+        spdlog::info("Translation stop error {}", translated.error().message);
+    }
+    if (!result.has_value() || !translated.has_value()) {
         return 1;
     }
 

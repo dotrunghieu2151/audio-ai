@@ -8,23 +8,10 @@
 
 #include "dth/audio/audio_system.hpp"
 #include "dth/audio/audio_transcriber.hpp"
+#include "dth/audio/audio_translator.hpp"
 #include "dth/common/timer.hpp"
+#include "live_translation.hpp"
 #include "spdlog/spdlog.h"
-
-namespace {
-
-// Transcriber worker thread: one call per utterance (offline_per_utterance has no partials), so
-// each utterance is shown on stdout as soon as it is transcribed.
-void on_transcript(void* user_data, const dth::audio::AudioTranscriber::TranscribedSegment& segment)
-{
-    auto* const file = static_cast<std::FILE*>(user_data);
-    spdlog::info("[{:.2f}s - {:.2f}s] {}", segment.start_sec, segment.end_sec, segment.text);
-    std::fprintf(file, "[%.2f - %.2f] %s\n", segment.start_sec, segment.end_sec,
-                 segment.text.c_str());
-    std::fflush(file);
-}
-
-}  // namespace
 
 // Use a volatile atomic flag for async-signal safety
 std::atomic<bool> keep_running{true};
@@ -40,6 +27,12 @@ void signalHandler(int signal)
 
 int main(int argc, char** argv)
 {
+    const auto options = demo::parse_options(argc, argv);
+    if (!options) {
+        demo::print_usage(argv[0]);
+        return 1;
+    }
+
     dth::audio::AudioSystem audioSystem{};
     auto                    inputDevice{audioSystem.default_input_device()};
     auto                    outputDevice{audioSystem.default_output_device()};
@@ -62,15 +55,13 @@ int main(int argc, char** argv)
     spdlog::info("Input device found: {}", inputDevice.value().name);
     spdlog::info("Output device found: {}", outputDevice.value().name);
 
-    char const* const transcription_path = argc > 1 ? argv[1] : "transcription.txt";
-
-    dth::common::Timer timer{};
-
-    std::FILE* transcriptionFile = std::fopen(transcription_path, "a");
-    if (transcriptionFile == nullptr) {
-        spdlog::info("Cannot open {}", transcription_path);
+    const demo::FilePtr transcription_file = demo::open_append(options->transcription_path);
+    const demo::FilePtr translation_file   = demo::open_append(options->translation_path);
+    if (!transcription_file || !translation_file) {
         return 1;
     }
+
+    dth::common::Timer timer{};
 
     spdlog::info("Loading model");
     dth::audio::AudioTranscriber asr({
@@ -81,6 +72,18 @@ int main(int argc, char** argv)
         .threads    = 8,
     });
     spdlog::info("Model loaded. Took {} s", timer.stop_ms() / 1e6);
+
+    timer.start();
+    dth::audio::AudioTranslator translator({.model_path = options->translator_model});
+    spdlog::info("Translator loaded. Took {} s", timer.stop_ms() / 1e6);
+
+    // Declared before the streams that call into it, so it outlives them.
+    demo::LiveTranslation output{transcription_file.get(), translation_file.get(),
+                                 options->languages.target};
+    // Units are translated as soon as their sentence is complete, also mid-utterance.
+    auto translation = translator.make_stream({.languages = options->languages},
+                                              &demo::LiveTranslation::on_translation, &output);
+    output.translate_into(translation);
     timer.start();
     const dth::audio::AudioTranscriber::StreamConfig stream_config{
         // Each VAD utterance is transcribed offline on its own.
@@ -94,9 +97,13 @@ int main(int argc, char** argv)
         .vad_adaptive_silence = {{.after_sec = 5.0, .min_silence_ms = 150},
                                  {.after_sec = 10.0, .min_silence_ms = 50}},
     };
+    if (!options->diarization_model.empty()) {
+        spdlog::warn("--diarize needs the continuous_stream strategy; ignored here");
+    }
     // Converts to the model's mono 16 kHz itself.
     auto stream = asr.make_stream(audioSystem, audioSystem.make_system_audio_source(),
-                                  stream_config, on_transcript, transcriptionFile);
+                                  stream_config, &demo::LiveTranslation::on_transcript,
+                                  &output);
     // auto               stream = audioSystem.make_stream(
     //     inputDevice.value(), outputDevice.value(), dth::audio::DuplexStreamConfig{},
     //     [](void*, dth::audio::DuplexAudioBufferView buffer) noexcept {
@@ -129,9 +136,15 @@ int main(int argc, char** argv)
     }
     // Flushes the tail and delivers the last utterance; no callback after this returns.
     result = stream.stop();
-    std::fclose(transcriptionFile);
     if (!result.has_value()) {
         spdlog::info("Stream stop error {}", result.error().message);
+    }
+    // Then the translations of the last utterances.
+    const auto translated = translation.stop();
+    if (!translated.has_value()) {
+        spdlog::info("Translation stop error {}", translated.error().message);
+    }
+    if (!result.has_value() || !translated.has_value()) {
         return 1;
     }
 

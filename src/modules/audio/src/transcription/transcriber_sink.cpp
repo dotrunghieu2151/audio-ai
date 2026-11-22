@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <exception>
 #include <expected>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <stop_token>
@@ -15,6 +16,7 @@
 
 #include "dth/common/spsc_ring_buffer.hpp"
 #include "transcription/segment_transcribers.hpp"
+#include "transcription/speaker_diarizer.hpp"
 #include "transcription/speech_segmenter.hpp"
 
 namespace dth::audio {
@@ -52,16 +54,19 @@ constexpr int    max_speech_pad_ms    = 1000;
 // End of a transcriber stream: the source's real-time thread writes into a ring; a worker thread
 // feeds it in VAD frames to the VoiceActivityDetector and the SpeechSegmenter (which cuts long
 // speech at pauses the SileroPauseFinder picks), whose utterances the SegmentTranscriber turns
-// into callbacks. The worker lives between start() and stop().
+// into callbacks; the optional SpeakerDiarizer gets all audio and reports who speaks. The worker
+// lives between start() and stop().
 class TranscriberSink final : public AudioSink
 {
   public:
     TranscriberSink(VoiceActivityDetector vad, SileroPauseFinder pause_finder,
                     std::unique_ptr<SegmentTranscriber> transcriber,
-                    SpeechSegmenter::Config             segmenter_config)
+                    SpeechSegmenter::Config             segmenter_config,
+                    std::optional<SpeakerDiarizer>      diarizer)
         : vad_{std::move(vad)},
           pause_finder_{std::move(pause_finder)},
           transcriber_{std::move(transcriber)},
+          diarizer_{std::move(diarizer)},
           segmenter_{*transcriber_, &pause_finder_, segmenter_config}
     {
     }
@@ -83,6 +88,9 @@ class TranscriberSink final : public AudioSink
         try {
             vad_.start();
             transcriber_->start();
+            if (diarizer_) {
+                diarizer_->start();
+            }
         } catch (const std::exception& e) {
             return std::unexpected(AudioError(AudioErrorCode::stream_start_failed, e.what()));
         }
@@ -156,10 +164,26 @@ class TranscriberSink final : public AudioSink
                 }
                 else {
                     segmenter_.append(std::span{frame_}.first(count));
+                    if (diarizer_) {
+                        diarizer_->push(std::span{frame_}.first(count));
+                    }
+                }
+            }
+            // Speakers first: their last turns reach consumers before the last text. A diarizer
+            // failure still lets the last utterance out before the stream reports it.
+            std::exception_ptr diarizer_error;
+            if (diarizer_) {
+                try {
+                    diarizer_->finish();
+                } catch (...) {
+                    diarizer_error = std::current_exception();
                 }
             }
             segmenter_.finish();
             transcriber_->finish();
+            if (diarizer_error) {
+                std::rethrow_exception(diarizer_error);
+            }
         } catch (const std::exception& e) {
             error_ = e.what();
             failed_.store(true, std::memory_order_relaxed);
@@ -173,11 +197,15 @@ class TranscriberSink final : public AudioSink
     {
         segmenter_.append(frame);
         vad_.process(frame, segmenter_);
+        if (diarizer_) {
+            diarizer_->push(frame);
+        }
     }
 
     VoiceActivityDetector               vad_;
     SileroPauseFinder                   pause_finder_;
     std::unique_ptr<SegmentTranscriber> transcriber_;
+    std::optional<SpeakerDiarizer>      diarizer_;   // worker only while running
     SpeechSegmenter                     segmenter_;  // worker only while running
 
     std::unique_ptr<dth::common::SpscRingBuffer<float>> ring_;
@@ -219,6 +247,34 @@ void validate(const StreamConfig& config)
         previous_after_sec  = step.after_sec;
         previous_silence_ms = step.min_silence_ms;
     }
+    if (!config.diarization_model_path.empty()) {
+        if (config.speaker_callback == nullptr) {
+            throw std::invalid_argument("diarization_model_path needs a speaker_callback");
+        }
+        // Speaker turns are matched to text by the partials' times; offline utterances have
+        // none, so a two-speaker utterance could not be split.
+        if (config.strategy != StreamConfig::Strategy::continuous_stream) {
+            throw std::invalid_argument("diarization needs the continuous_stream strategy");
+        }
+    }
+}
+
+// The diarizer's streaming session on the ASR's backend (the CPU is too slow for real time).
+std::optional<SpeakerDiarizer> make_diarizer(const StreamAsrModel& asr, const StreamConfig& config,
+                                             void* user_data)
+{
+    if (config.diarization_model_path.empty()) {
+        return std::nullopt;
+    }
+    const auto model =
+        audiocpp::load_model(asr.registry, config.diarization_model_path, "nemotron_3_diar");
+    if (!audiocpp_model_supports(model.get(), "diar", "streaming")) {
+        throw std::runtime_error("Diarization model does not support streaming");
+    }
+    const auto options = audiocpp::make_options({{"nemotron_3_diar.latency_profile", "low"}});
+    return SpeakerDiarizer{audiocpp::create_session(model.get(), "diar", "streaming", asr.backend,
+                                                    options.get()),
+                           config.speaker_callback, user_data};
 }
 
 // Silero on the CPU: a 512-sample frame is too little work to pay a GPU dispatch for.
@@ -304,7 +360,8 @@ std::unique_ptr<AudioSink> make_transcriber_sink(const StreamAsrModel&  asr,
         SpeechSegmenter::Config{
             .history_samples     = history_samples,
             .max_segment_samples = seconds_to_samples(config.max_utterance_sec),
-        });
+        },
+        make_diarizer(asr, config, user_data));
 }
 
 }  // namespace dth::audio

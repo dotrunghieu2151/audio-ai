@@ -60,6 +60,27 @@ class AudioTranscriber
         }
     };
 
+    // Who spoke when in a stream (diarization). Times are seconds since the stream's start(), on
+    // the clock of TranscribedSegment times. `turns` are the speaker turns that ended since the
+    // last update: a turn is reported once its speaker stops (or pauses ~0.3 s), so an ongoing
+    // turn is not known yet. Every turn that ended before `complete_until_sec` has been reported.
+    // Turns of different speakers may overlap. Speakers are named by arrival order: "speaker_0",
+    // "speaker_1", ...
+    struct SpeakerTurn
+    {
+        std::string speaker;
+        double      start_sec = 0.0;
+        double      end_sec   = 0.0;
+    };
+    struct SpeakerUpdate
+    {
+        std::vector<SpeakerTurn> turns;
+        double                   complete_until_sec = 0.0;
+    };
+    // Receives a stream's speaker updates on the same worker thread, under the same rules as
+    // StreamCallback (and with its user_data).
+    using SpeakerCallback = void (*)(void* user_data, const SpeakerUpdate& update);
+
     // Per-stream settings of make_stream().
     struct StreamConfig
     {
@@ -120,6 +141,16 @@ class AudioTranscriber
         // offline_per_utterance utterance, on the continuous_stream stream start. Invalid ones
         // fail the stream's start().
         std::map<std::string, std::string> request_options;
+
+        // Speaker diarization: a nemotron_3_diar GGUF (e.g.
+        // assets/models/nemotron-3-diarization-q8_0.gguf), run on the stream's audio alongside the
+        // ASR with the transcriber's backend (Metal: ~0.1x real time; the CPU is too slow).
+        // A turn is reported 0.8-1.4 s after it ends. Needs the continuous_stream strategy: turns
+        // are matched to text by the partials' times, which rely on text_latency_sec matching the
+        // model (tuned for nemotron_asr, 0.32 s output chunks). Empty: no diarization.
+        std::string diarization_model_path;
+        // Required with diarization_model_path.
+        SpeakerCallback speaker_callback = nullptr;
     };
 
     struct TranscribeResult
@@ -155,7 +186,8 @@ class AudioTranscriber
     // - is_final false (continuous_stream only): new text as soon as the model emits it, part of
     //   the utterance the next final call delivers whole. Concatenating the partials of an
     //   utterance gives its text; [start_sec, end_sec] runs from the utterance's start to the
-    //   moment the text was emitted (the model lags the audio by StreamConfig::text_latency_sec).
+    //   audio time the text covers: the moment it was emitted minus StreamConfig::text_latency_sec
+    //   (the model's lag), the clock of SpeakerUpdate times.
     struct TranscribedSegment
     {
         std::string text;

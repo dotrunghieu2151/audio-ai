@@ -1,6 +1,7 @@
 #include "transcription/segment_transcribers.hpp"
 
 #include <algorithm>
+#include <ranges>
 #include <stdexcept>
 #include <utility>
 
@@ -206,6 +207,9 @@ void ContinuousStreamTranscriber::start()
     skipped_start_ = 0;
     pending_audio_.clear();
     model_samples_ = 0;
+    fed_runs_.clear();
+    fed_samples_     = 0;
+    fed_stream_next_ = -1;
     published_.clear();
     text_.clear();
     language_.clear();
@@ -220,7 +224,7 @@ void ContinuousStreamTranscriber::audio(std::span<const float> samples)
     stream_samples_ += static_cast<std::int64_t>(samples.size());
 
     if (feeding(position)) {
-        feed(samples);
+        feed(samples, position);
     }
     else {
         skip(position, samples);
@@ -243,8 +247,10 @@ void ContinuousStreamTranscriber::segment_begin(std::int64_t start_sample)
             static_cast<std::size_t>(std::min(from - skipped_start_,
                                               static_cast<std::int64_t>(skipped_.size()))));
         std::vector<float> resumed{tail.begin(), tail.end()};
+        const std::int64_t resumed_start =
+            skipped_start_ + static_cast<std::int64_t>(skipped_.size() - tail.size());
         skipped_.clear();
-        feed(resumed);
+        feed(resumed, resumed_start);
     }
 }
 
@@ -276,9 +282,14 @@ void ContinuousStreamTranscriber::skip(std::int64_t position, std::span<const fl
     }
 }
 
-void ContinuousStreamTranscriber::feed(std::span<const float> samples)
+void ContinuousStreamTranscriber::feed(std::span<const float> samples, std::int64_t position)
 {
     skipped_.clear();
+    if (position != fed_stream_next_) {
+        fed_runs_.push_back({.model_start = fed_samples_, .stream_start = position});
+    }
+    fed_samples_ += static_cast<std::int64_t>(samples.size());
+    fed_stream_next_ = position + static_cast<std::int64_t>(samples.size());
 
     pending_audio_.insert(pending_audio_.end(), samples.begin(), samples.end());
     if (pending_audio_.size() < chunk_samples_) {
@@ -325,7 +336,7 @@ void ContinuousStreamTranscriber::finish()
             ++start;  // not into the middle of a UTF-8 character
         }
         if (start < full.text.size()) {
-            deliver_partial(full.text.substr(start));
+            deliver_partial(full.text.substr(start), stream_samples_);  // all audio is heard
         }
     }
 
@@ -347,6 +358,11 @@ void ContinuousStreamTranscriber::push(std::span<const float> samples)
                                       audiocpp::sample_rate, audiocpp::channels, model_samples_,
                                       &raw_event));
     model_samples_ += static_cast<std::int64_t>(samples.size());
+    // Runs before the one holding the oldest position text can still cover are no longer needed.
+    const std::int64_t oldest = model_samples_ - text_latency_samples_;
+    while (fed_runs_.size() > 1 && fed_runs_[1].model_start <= oldest) {
+        fed_runs_.erase(fed_runs_.begin());
+    }
 
     for_each_event(session_.get(), raw_event,
                    [this](const audiocpp::EventPtr& event) { collect(event); });
@@ -368,7 +384,7 @@ void ContinuousStreamTranscriber::collect(const audiocpp::EventPtr& event)
 
 // Adds `text` to the current utterance and hands it out right away. Text arriving between
 // utterances belongs to the next one, whose start is not known yet: it spans from the last end.
-void ContinuousStreamTranscriber::deliver_partial(std::string text)
+void ContinuousStreamTranscriber::deliver_partial(std::string text, std::optional<std::int64_t> heard_at)
 {
     if (text.empty()) {
         return;
@@ -376,13 +392,29 @@ void ContinuousStreamTranscriber::deliver_partial(std::string text)
     text_ += text;
 
     const std::int64_t start = open_start_ ? *open_start_ : closed_ ? closed_->start : last_end_;
+    const std::int64_t heard = std::max(start, heard_at.value_or(heard_position()));
     callback_(user_data_, AudioTranscriber::TranscribedSegment{
                               .text      = std::move(text),
                               .language  = language_,
                               .start_sec = to_seconds(start),
-                              .end_sec   = to_seconds(stream_samples_),
+                              .end_sec   = to_seconds(heard),
                               .is_final  = false,
                           });
+}
+
+std::int64_t ContinuousStreamTranscriber::heard_position() const
+{
+    // text_latency is one chunk plus the model's lookahead; the text covers the pushed audio up
+    // to the lookahead.
+    const std::int64_t lookahead =
+        std::max<std::int64_t>(0, text_latency_samples_ - static_cast<std::int64_t>(chunk_samples_));
+    const std::int64_t model = std::max<std::int64_t>(0, model_samples_ - lookahead);
+    const auto run = std::ranges::find_if(fed_runs_ | std::views::reverse,
+                                          [model](const FedRun& r) { return r.model_start <= model; });
+    if (run == (fed_runs_ | std::views::reverse).end()) {
+        return stream_samples_;
+    }
+    return run->stream_start + (model - run->model_start);
 }
 
 void ContinuousStreamTranscriber::emit(Range range)

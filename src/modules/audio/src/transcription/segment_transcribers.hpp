@@ -142,10 +142,15 @@ class ContinuousStreamTranscriber final : public SegmentTranscriber
 
     [[nodiscard]] bool feeding(std::int64_t position) const noexcept;
     void               skip(std::int64_t position, std::span<const float> samples);
-    void               feed(std::span<const float> samples);
+    // `samples` start at stream position `position`.
+    void               feed(std::span<const float> samples, std::int64_t position);
+    // The stream position of the audio the model's text covers so far: its pushed audio minus the
+    // lookahead, mapped back across skipped silence.
+    [[nodiscard]] std::int64_t heard_position() const;
     void               push(std::span<const float> samples);
     void               collect(const audiocpp::EventPtr& event);
-    void               deliver_partial(std::string text);
+    // `heard`: the stream position the text covers; default heard_position().
+    void               deliver_partial(std::string text, std::optional<std::int64_t> heard = {});
     void               emit_if_due();
     void               emit(Range range);
 
@@ -164,6 +169,18 @@ class ContinuousStreamTranscriber final : public SegmentTranscriber
     std::size_t        chunk_samples_ = 0;
     std::vector<float> pending_audio_;  // < chunk_samples_ not yet pushed
     std::int64_t       model_samples_ = 0;  // pushed to the model (model time)
+
+    // Where fed audio sits on the stream: runs of (model time, stream time) starts. The model
+    // gets audio in bursts (a VAD start hands it the history since the start), so the time text
+    // is emitted says little about when it was spoken.
+    struct FedRun
+    {
+        std::int64_t model_start  = 0;
+        std::int64_t stream_start = 0;
+    };
+    std::vector<FedRun> fed_runs_;
+    std::int64_t        fed_samples_     = 0;  // given to feed() (model time, incl. pending_audio_)
+    std::int64_t        fed_stream_next_ = -1;  // stream position following the last fed sample
 
     std::string published_;  // all text the session emitted this stream
     std::string text_;       // text not yet delivered

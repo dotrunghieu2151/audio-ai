@@ -48,10 +48,19 @@ target_sources(
       src/pipeline/pipeline_stream.cpp
       src/transcription/speech_segmenter.cpp
       src/transcription/segment_transcribers.cpp
+      src/transcription/speaker_diarizer.cpp
       src/transcription/transcriber_sink.cpp
+      src/audio_translator.cpp
+      src/text_stream.cpp
+      src/translation/llama_support.cpp
+      src/translation/plamo_translate_adapter.cpp
+      src/translation/sentence_boundary_model.cpp
+      src/translation/translation_engine.cpp
+      src/translation/translation_scheduler.cpp
+      src/translation/translation_worker.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common audiocpp::audiocpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE DTH::common audiocpp::audiocpp llama onnxruntime::onnxruntime)
 
 # speexdsp ships no CMake package config (pkg-config only).
 include(SelectLibraryConfigurations)
@@ -63,6 +72,17 @@ find_library(SPEEXDSP_LIBRARY_DEBUG NAMES speexdsp
 select_library_configurations(SPEEXDSP)
 target_include_directories(${PROJECT_NAME} PRIVATE ${SPEEXDSP_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${SPEEXDSP_LIBRARIES})
+
+# sentencepiece (XLM-R tokenizer of the sentence boundary model) ships no CMake package config
+# either; its static library needs protobuf-lite (and through it abseil).
+find_path(SENTENCEPIECE_INCLUDE_DIR sentencepiece_processor.h REQUIRED)
+find_library(SENTENCEPIECE_LIBRARY_RELEASE NAMES sentencepiece REQUIRED
+  PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib" NO_DEFAULT_PATH)
+find_library(SENTENCEPIECE_LIBRARY_DEBUG NAMES sentencepiece
+  PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib" NO_DEFAULT_PATH)
+select_library_configurations(SENTENCEPIECE)
+target_include_directories(${PROJECT_NAME} PRIVATE ${SENTENCEPIECE_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${SENTENCEPIECE_LIBRARIES} protobuf::libprotobuf-lite)
 
 # System audio capture: Core Audio process taps (Objective-C++) on macOS, stub elsewhere.
 if (APPLE)
@@ -182,3 +202,18 @@ if (DTH_AUDIO_BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
+
+option(
+    DTH_AUDIO_BUILD_BENCHMARKS
+    "Build DTH_AUDIO benchmarks"
+    ON
+)
+if (DTH_AUDIO_BUILD_BENCHMARKS)
+  # Real-time latency of the translation layer (needs a translation model; see the file header).
+  add_executable(translation_latency benchmarks/translation_latency.cpp)
+  target_link_libraries(translation_latency PRIVATE DTH::audio llama)
+  target_include_directories(translation_latency PRIVATE src)
+  # Replays a recorded WAV through the live pipeline and prints every translation unit.
+  add_executable(translation_replay benchmarks/translation_replay.cpp)
+  target_link_libraries(translation_replay PRIVATE DTH::audio)
+endif()
